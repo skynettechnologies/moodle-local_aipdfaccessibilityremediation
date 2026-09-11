@@ -1,0 +1,1092 @@
+/* This file is part of Moodle - https://moodle.org/
+ *
+ * Moodle is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Moodle is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * AI PDF Accessibility Remediation styles.
+ *
+ * Every rule is scoped to .aipdf-app and every class carries the aipdf- prefix,
+ * so nothing here can reach the theme and no Bootstrap class name is reused.
+ * The interface is written without relying on any framework, so it renders the
+ * same on every theme.
+ *
+ * @package    local_aipdfaccessibilityremediation
+ * @copyright  2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+.aipdf-app {
+    --aipdf-primary: #420083;
+    --aipdf-primary-dark: #33006a;
+    --aipdf-accent: #5c17a8;
+    --aipdf-accent-soft: #ece1f7;
+    --aipdf-accent-softer: #f5eefc;
+    --aipdf-success: #16a34a;
+    --aipdf-success-bg: #e7f7ee;
+    --aipdf-warning: #b45309;
+    --aipdf-warning-bg: #fdeee2;
+    --aipdf-danger: #b40000;
+    --aipdf-danger-bg: #fdeef1;
+    --aipdf-info: #0369a1;
+    --aipdf-info-bg: #e0f2fe;
+    --aipdf-text: #1c0a36;
+    --aipdf-muted: #5d5470;
+    --aipdf-surface: #fff;
+    --aipdf-surface-alt: #f8f9fa;
+    --aipdf-border: rgba(0, 0, 0, 0.12);
+    --aipdf-radius: 10px;
+    box-sizing: border-box;
+    color: var(--aipdf-text);
+    position: relative;
+}
+
+.aipdf-app *,
+.aipdf-app *::before,
+.aipdf-app *::after {
+    box-sizing: inherit;
+}
+
+.aipdf-app h2,
+.aipdf-app h3 {
+    color: inherit;
+    margin: 0;
+}
+
+.aipdf-app h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.aipdf-app p {
+    margin: 0;
+}
+
+.aipdf-sr-only {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+.aipdf-grow {
+    flex: 1 1 auto;
+}
+
+.aipdf-center {
+    text-align: center;
+}
+
+.aipdf-right {
+    text-align: right;
+}
+
+.aipdf-muted {
+    color: var(--aipdf-muted);
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+/* ------------------------------------------------------------------ Tabs */
+
+.aipdf-tabs {
+    border: 1px solid rgba(66, 0, 131, 0.4);
+    border-radius: var(--aipdf-radius);
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.aipdf-tab {
+    align-items: center;
+    background: rgba(66, 0, 131, 0.06);
+    border: 0;
+    color: var(--aipdf-text);
+    cursor: pointer;
+    display: flex;
+    flex: 1 1 10rem;
+    font-size: 1rem;
+    gap: 0.6rem;
+    justify-content: center;
+    padding: 0.85rem 1rem;
+}
+
+.aipdf-tab:hover,
+.aipdf-tab:focus {
+    color: var(--aipdf-accent);
+}
+
+.aipdf-tab-active,
+.aipdf-tab-active:hover,
+.aipdf-tab-active:focus {
+    background: var(--aipdf-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.aipdf-tab-icon {
+    display: inline-flex;
+}
+
+.aipdf-subtitle {
+    color: var(--aipdf-muted);
+    margin-bottom: 1rem;
+}
+
+/* ---------------------------------------------------------------- Panels */
+
+.aipdf-panel {
+    background: var(--aipdf-surface);
+    border: 1px solid var(--aipdf-border);
+    border-radius: var(--aipdf-radius);
+    margin-bottom: 1.5rem;
+}
+
+.aipdf-upload-split {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+}
+
+.aipdf-dropzone {
+    align-items: center;
+    background: var(--aipdf-surface-alt);
+    border: 2px dashed rgba(66, 0, 131, 0.35);
+    border-radius: var(--aipdf-radius);
+    color: var(--aipdf-accent);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    justify-content: center;
+    min-height: 12rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+}
+
+.aipdf-dropzone:hover,
+.aipdf-dropzone:focus,
+.aipdf-dropzone.aipdf-dragging {
+    background: rgba(66, 0, 131, 0.06);
+    border-color: var(--aipdf-primary);
+}
+
+.aipdf-dz-icon {
+    align-items: center;
+    background: var(--aipdf-surface);
+    border: 1px solid var(--aipdf-primary);
+    border-radius: 12px;
+    display: flex;
+    height: 3.5rem;
+    justify-content: center;
+    width: 3.5rem;
+}
+
+.aipdf-note {
+    align-items: center;
+    color: var(--aipdf-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0 1.5rem 1.25rem;
+}
+
+.aipdf-note-accent {
+    color: var(--aipdf-accent);
+}
+
+.aipdf-dot {
+    opacity: 0.5;
+}
+
+/* ---------------------------------------------------- Inputs and buttons */
+
+.aipdf-input {
+    background: var(--aipdf-surface);
+    border: 1px solid var(--aipdf-border);
+    border-radius: 6px;
+    color: var(--aipdf-text);
+    padding: 0.5rem 0.75rem;
+    width: 100%;
+}
+
+.aipdf-input-iconed {
+    padding-left: 2.4rem;
+}
+
+.aipdf-input:focus {
+    border-color: var(--aipdf-primary);
+    box-shadow: 0 0 0 3px rgba(66, 0, 131, 0.15);
+    outline: 0;
+}
+
+.aipdf-input-icon,
+.aipdf-search-icon {
+    color: var(--aipdf-muted);
+    display: inline-flex;
+    left: 0.75rem;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.aipdf-select {
+    background: var(--aipdf-surface);
+    border: 1px solid var(--aipdf-border);
+    border-radius: 6px;
+    color: var(--aipdf-text);
+    padding: 0.4rem 0.6rem;
+}
+
+.aipdf-btn {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.95rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0.55rem 1rem;
+}
+
+.aipdf-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.aipdf-btn-sm {
+    font-size: 0.875rem;
+    padding: 0.4rem 0.8rem;
+}
+
+.aipdf-btn-ghost {
+    background: transparent;
+    border-color: var(--aipdf-border);
+    color: var(--aipdf-text);
+}
+
+.aipdf-btn-ghost:hover {
+    background: var(--aipdf-surface-alt);
+}
+
+.aipdf-btn-primary {
+    background: var(--aipdf-primary);
+    color: #fff;
+}
+
+.aipdf-btn-primary:not(:disabled):hover {
+    background: var(--aipdf-primary-dark);
+}
+
+.aipdf-btn-outline {
+    background: var(--aipdf-surface);
+    border-color: var(--aipdf-primary);
+    color: var(--aipdf-accent);
+}
+
+.aipdf-btn-outline:not(:disabled):hover {
+    background: var(--aipdf-primary);
+    color: #fff;
+}
+
+.aipdf-btn-secondary {
+    background: var(--aipdf-surface-alt);
+    border-color: var(--aipdf-border);
+    color: var(--aipdf-text);
+}
+
+.aipdf-btn-danger {
+    background: var(--aipdf-danger);
+    color: #fff;
+}
+
+.aipdf-btn-danger:not(:disabled):hover {
+    background: #960000;
+}
+
+.aipdf-btn-soft {
+    background: rgba(66, 0, 131, 0.08);
+    color: var(--aipdf-accent);
+}
+
+.aipdf-link-danger {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: var(--aipdf-danger);
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 600;
+    gap: 0.35rem;
+    padding: 0;
+}
+
+.aipdf-link-danger:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* --------------------------------------------------------------- Filters */
+
+.aipdf-filters {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    padding: 1.25rem 1.5rem;
+}
+
+.aipdf-filter-group {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.aipdf-filter-group label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.aipdf-search {
+    display: block;
+    position: relative;
+}
+
+.aipdf-search .aipdf-input {
+    min-width: 14rem;
+}
+
+/* ---------------------------------------------------------------- Tables */
+
+.aipdf-table-wrap {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    width: 100%;
+}
+
+.aipdf-table {
+    border-collapse: collapse;
+    margin: 0;
+    width: 100%;
+}
+
+.aipdf-table th {
+    background: var(--aipdf-surface-alt);
+    border-bottom: 1px solid var(--aipdf-border);
+    font-weight: 600;
+    padding: 0.7rem 1rem;
+    text-align: left;
+}
+
+.aipdf-table td {
+    border-bottom: 1px solid var(--aipdf-border);
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+}
+
+.aipdf-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.aipdf-col-check {
+    width: 3rem;
+}
+
+.aipdf-checkbox {
+    height: 1.15rem;
+    margin: 0;
+    width: 1.15rem;
+}
+
+.aipdf-doc-cell {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.aipdf-file-icon {
+    align-items: center;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    border-radius: 6px;
+    color: #fff;
+    display: flex;
+    flex: none;
+    font-size: 0.6rem;
+    font-weight: 700;
+    height: 2rem;
+    justify-content: center;
+    width: 2rem;
+}
+
+.aipdf-file-icon-purple {
+    background: linear-gradient(135deg, #6a1fb8, #420083);
+}
+
+.aipdf-file-icon-link {
+    background: linear-gradient(135deg, #7a2ec0, #4f0f96);
+}
+
+.aipdf-doc-sub {
+    color: var(--aipdf-muted);
+    display: block;
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aipdf-row-actions,
+.aipdf-table-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+}
+
+.aipdf-table-actions {
+    justify-content: flex-end;
+}
+
+/* ----------------------------------------------- Account and plan bars */
+
+.aipdf-status-bars {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.aipdf-account-bar,
+.aipdf-plan-bar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.aipdf-account-who {
+    color: var(--aipdf-muted);
+    font-size: 0.875rem;
+}
+
+.aipdf-account-who b {
+    color: var(--aipdf-text);
+}
+
+/* ----------------------------------------------------------------- Chips */
+
+.aipdf-chip {
+    border-radius: 5px;
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.25rem 0.7rem;
+    white-space: nowrap;
+}
+
+.aipdf-chip-file {
+    background: var(--aipdf-accent-soft);
+    color: var(--aipdf-accent);
+}
+
+.aipdf-chip-url,
+.aipdf-chip-ready {
+    background: var(--aipdf-info-bg);
+    color: var(--aipdf-info);
+}
+
+.aipdf-chip-web {
+    background: var(--aipdf-surface-alt);
+    border: 1px solid var(--aipdf-border);
+    color: var(--aipdf-muted);
+}
+
+.aipdf-chip-scanning,
+.aipdf-chip-processing {
+    background: var(--aipdf-accent-soft);
+    color: var(--aipdf-accent);
+}
+
+.aipdf-chip-pending {
+    background: var(--aipdf-warning-bg);
+    color: var(--aipdf-warning);
+}
+
+.aipdf-chip-remediated,
+.aipdf-chip-passed {
+    background: var(--aipdf-success-bg);
+    color: var(--aipdf-success);
+}
+
+.aipdf-chip-error {
+    background: var(--aipdf-danger-bg);
+    color: var(--aipdf-danger);
+}
+
+.aipdf-chip-button {
+    border: 0;
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------------ Pagination */
+
+.aipdf-pagination {
+    align-items: center;
+    background: var(--aipdf-accent-softer);
+    border-top: 1px solid var(--aipdf-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+}
+
+.aipdf-pagination-list {
+    display: flex;
+    gap: 0.3rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aipdf-page-link {
+    background: var(--aipdf-surface);
+    border: 1px solid var(--aipdf-border);
+    border-radius: 6px;
+    color: var(--aipdf-text);
+    cursor: pointer;
+    min-width: 2.25rem;
+    padding: 0.3rem 0.5rem;
+}
+
+.aipdf-page-link:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.aipdf-page-current .aipdf-page-link {
+    background: var(--aipdf-primary);
+    border-color: var(--aipdf-primary);
+    color: #fff;
+}
+
+/* ----------------------------------------------------------- Bulk footer */
+
+.aipdf-bulk {
+    align-items: center;
+    background: var(--aipdf-surface-alt);
+    border-top: 1px solid var(--aipdf-border);
+    border-radius: 0 0 var(--aipdf-radius) var(--aipdf-radius);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+}
+
+.aipdf-bulk-icon {
+    align-items: center;
+    background: var(--aipdf-primary);
+    border-radius: 6px;
+    color: #fff;
+    display: flex;
+    height: 2.5rem;
+    justify-content: center;
+    width: 2.5rem;
+}
+
+.aipdf-bulk-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.aipdf-bulk-sep {
+    background: var(--aipdf-border);
+    height: 1.25rem;
+    width: 1px;
+}
+
+.aipdf-bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+/* -------------------------------------------------------------- Progress */
+
+.aipdf-progress {
+    border-bottom: 1px solid var(--aipdf-border);
+    padding: 1rem 1.5rem;
+}
+
+.aipdf-progress-label {
+    margin-bottom: 0.5rem;
+}
+
+.aipdf-progress-track {
+    background: rgba(66, 0, 131, 0.1);
+    border-radius: 999px;
+    display: block;
+    height: 9px;
+    overflow: hidden;
+}
+
+.aipdf-progress-fill {
+    background: linear-gradient(90deg, #420083, #a06bff);
+    border-radius: 999px;
+    display: block;
+    height: 100%;
+    transition: width 0.6s ease;
+    width: 4%;
+}
+
+.aipdf-empty {
+    color: var(--aipdf-muted);
+    padding: 3rem 1.25rem;
+    text-align: center;
+}
+
+/* --------------------------------------------------------------- Dialogs */
+
+.aipdf-overlay {
+    align-items: center;
+    background: rgba(20, 12, 46, 0.55);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 1rem;
+    position: fixed;
+    z-index: 1050;
+}
+
+.aipdf-overlay[hidden] {
+    display: none;
+}
+
+.aipdf-dialog {
+    background: var(--aipdf-surface);
+    border-radius: var(--aipdf-radius);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+    max-height: 90vh;
+    max-width: 100%;
+    overflow-y: auto;
+    width: 34rem;
+}
+
+.aipdf-dialog-wide {
+    width: 46rem;
+}
+
+.aipdf-dialog-head {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--aipdf-border);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+}
+
+.aipdf-dialog-head h2 {
+    align-items: center;
+    display: flex;
+    font-size: 1.25rem;
+    gap: 0.5rem;
+}
+
+.aipdf-dialog-close {
+    align-items: center;
+    background: var(--aipdf-danger);
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex: none;
+    height: 2rem;
+    justify-content: center;
+    width: 2rem;
+}
+
+.aipdf-dialog-body {
+    padding: 1.25rem;
+}
+
+.aipdf-dialog-foot {
+    border-top: 1px solid var(--aipdf-border);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding: 0.85rem 1.25rem;
+}
+
+.aipdf-dialog-foot-split {
+    justify-content: space-between;
+}
+
+.aipdf-notice-error .aipdf-notice-icon {
+    background: var(--aipdf-danger-bg);
+    color: var(--aipdf-danger);
+}
+
+.aipdf-notice-error strong {
+    color: var(--aipdf-danger);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+/* --------------------------------------------------------- Account fields */
+
+.aipdf-field {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.aipdf-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.aipdf-field-error,
+.aipdf-field-hint {
+    display: block;
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+}
+
+.aipdf-field-hint {
+    color: var(--aipdf-muted);
+}
+
+.aipdf-field-error {
+    color: var(--aipdf-danger);
+}
+
+.aipdf-input[aria-invalid="true"] {
+    border-color: var(--aipdf-danger);
+}
+
+.aipdf-notice {
+    display: flex;
+    gap: 1rem;
+}
+
+.aipdf-notice-icon {
+    align-items: center;
+    background: var(--aipdf-accent-soft);
+    border-radius: 50%;
+    color: var(--aipdf-accent);
+    display: flex;
+    flex: none;
+    height: 3rem;
+    justify-content: center;
+    width: 3rem;
+}
+
+.aipdf-notice h2 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+}
+
+.aipdf-pill {
+    align-items: center;
+    background: var(--aipdf-surface-alt);
+    border: 1px solid var(--aipdf-border);
+    border-radius: 6px;
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+.aipdf-check-row {
+    align-items: center;
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.aipdf-check-row label {
+    margin: 0;
+}
+
+/* ----------------------------------------------------------- Suggestions */
+
+.aipdf-sug-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.aipdf-sug-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.aipdf-sug-item {
+    border: 1px solid var(--aipdf-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.aipdf-sug-item-failed {
+    border-color: rgba(180, 83, 9, 0.45);
+}
+
+.aipdf-sug-row {
+    align-items: center;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+    width: 100%;
+}
+
+.aipdf-sug-row:hover {
+    background: var(--aipdf-surface-alt);
+}
+
+.aipdf-sug-dot {
+    align-items: center;
+    border-radius: 50%;
+    display: flex;
+    flex: none;
+    height: 1.5rem;
+    justify-content: center;
+    width: 1.5rem;
+}
+
+.aipdf-sug-dot-passed {
+    background: var(--aipdf-success-bg);
+    color: var(--aipdf-success);
+}
+
+.aipdf-sug-dot-failed {
+    background: var(--aipdf-warning-bg);
+    color: var(--aipdf-warning);
+}
+
+.aipdf-sug-title {
+    font-weight: 600;
+}
+
+.aipdf-sug-detail {
+    color: var(--aipdf-muted);
+    flex: 1 1 auto;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aipdf-sug-caret {
+    color: var(--aipdf-muted);
+    flex: none;
+}
+
+.aipdf-sug-body {
+    padding: 0.25rem 1rem 1rem 3.2rem;
+}
+
+.aipdf-sug-body p {
+    margin-bottom: 0.75rem;
+}
+
+.aipdf-sug-example {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: 1fr 1fr;
+}
+
+.aipdf-sug-example-col {
+    border: 1px solid var(--aipdf-border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.aipdf-sug-example-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0.35rem 0.6rem;
+    text-transform: uppercase;
+}
+
+.aipdf-sug-example-before .aipdf-sug-example-label {
+    background: var(--aipdf-danger-bg);
+    color: var(--aipdf-danger);
+}
+
+.aipdf-sug-example-after .aipdf-sug-example-label {
+    background: var(--aipdf-success-bg);
+    color: var(--aipdf-success);
+}
+
+.aipdf-sug-example pre {
+    background: var(--aipdf-surface-alt);
+    font-size: 0.8rem;
+    margin: 0;
+    padding: 0.6rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* --------------------------------------------------------- Toast, loader */
+
+.aipdf-toast {
+    background: #241454;
+    border-radius: 8px;
+    bottom: 1.5rem;
+    color: #fff;
+    max-width: 24rem;
+    padding: 0.85rem 1.1rem;
+    position: fixed;
+    right: 1.5rem;
+    z-index: 1060;
+}
+
+.aipdf-toast[hidden] {
+    display: none;
+}
+
+.aipdf-toast-success {
+    background: #14532d;
+}
+
+.aipdf-toast-error {
+    background: #7f1d1d;
+}
+
+.aipdf-loader {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 1055;
+}
+
+.aipdf-loader[hidden] {
+    display: none;
+}
+
+.aipdf-spinner {
+    animation: aipdf-spin 1.1s linear infinite;
+    border: 3px solid rgba(66, 0, 131, 0.25);
+    border-radius: 50%;
+    border-top-color: var(--aipdf-primary);
+    display: block;
+    height: 2.5rem;
+    width: 2.5rem;
+}
+
+.aipdf-spin {
+    animation: aipdf-spin 1.1s linear infinite;
+    display: inline-flex;
+}
+
+@keyframes aipdf-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------------------------------------------------------- Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+    .aipdf-spinner,
+    .aipdf-spin {
+        animation: none;
+    }
+
+    .aipdf-progress-fill {
+        transition: none;
+    }
+}
+
+/* ------------------------------------------------------------ Small screens */
+
+@media (max-width: 62rem) {
+    .aipdf-sug-example {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 48rem) {
+    .aipdf-tabs {
+        flex-direction: column;
+    }
+
+    .aipdf-bulk-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .aipdf-bulk-actions .aipdf-btn {
+        flex: 1 1 auto;
+    }
+
+    .aipdf-search .aipdf-input {
+        min-width: 0;
+    }
+
+    .aipdf-sug-detail {
+        display: none;
+    }
+}
+
+/* --------------------------------------------------------------- Dark mode */
+
+@media (prefers-color-scheme: dark) {
+    .aipdf-app {
+        --aipdf-accent: #b98cff;
+        --aipdf-accent-soft: #2d2050;
+        --aipdf-accent-softer: #221a3d;
+        --aipdf-success-bg: #10331f;
+        --aipdf-warning-bg: #3a2410;
+        --aipdf-danger-bg: #3d1b24;
+        --aipdf-info-bg: #0c3552;
+        --aipdf-info: #7dd3fc;
+        --aipdf-text: #eceafd;
+        --aipdf-muted: #b9b6d4;
+        --aipdf-surface: #1c1832;
+        --aipdf-surface-alt: #221d3d;
+        --aipdf-border: rgba(255, 255, 255, 0.15);
+    }
+
+    .aipdf-loader {
+        background: rgba(0, 0, 0, 0.6);
+    }
+}

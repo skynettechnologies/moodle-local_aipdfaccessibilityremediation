@@ -1,0 +1,457 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_aipdfaccessibilityremediation/dashboard
+
+    AI PDF Accessibility Remediation workspace.
+
+    The markup is a shell. Every label is written in by the
+    local_aipdfaccessibilityremediation/dashboard AMD module from the language
+    strings handed to it by index.php, and every row comes from the remediation
+    service, so the template takes no context.
+
+    Example context (json):
+    {
+    }
+}}
+<div class="aipdf-app" id="aipdf-app">
+
+    <div class="aipdf-tabs" role="tablist">
+        <button type="button" class="aipdf-tab aipdf-tab-active" data-aipdf-tab="upload"
+            role="tab" aria-selected="true">
+            <span class="aipdf-tab-icon" data-aipdf-icon="upload" data-aipdf-size="22"></span>
+            <span data-aipdf-label="tabupload"></span>
+        </button>
+        <button type="button" class="aipdf-tab" data-aipdf-tab="scan" role="tab" aria-selected="false">
+            <span class="aipdf-tab-icon" data-aipdf-icon="link" data-aipdf-size="22"></span>
+            <span data-aipdf-label="tabscan"></span>
+        </button>
+        <button type="button" class="aipdf-tab" data-aipdf-tab="remediated" role="tab" aria-selected="false">
+            <span class="aipdf-tab-icon" data-aipdf-icon="doc" data-aipdf-size="22"></span>
+            <span data-aipdf-label="tabremediated"></span>
+        </button>
+    </div>
+
+    <p class="aipdf-subtitle" id="aipdf-subtitle"></p>
+
+    {{!
+        Which account this workspace is connected as, and which plan it is on.
+        Both are filled in by the module: the account from the site settings or
+        whatever an administrator corrected them to, the plan from /auth/me.
+    }}
+    <div class="aipdf-status-bars">
+        <div class="aipdf-account-bar" id="aipdf-account-bar" hidden>
+            <span class="aipdf-account-who">
+                <b data-aipdf-role="domain"></b>
+                <span aria-hidden="true"> &middot; </span>
+                <span data-aipdf-role="email"></span>
+            </span>
+            <button type="button" class="aipdf-btn aipdf-btn-ghost aipdf-btn-sm"
+                data-aipdf-action="account-change">
+                <span data-aipdf-icon="pencil" data-aipdf-size="15"></span>
+                <span data-aipdf-label="accountchange"></span>
+            </button>
+        </div>
+
+        <div class="aipdf-plan-bar" id="aipdf-plan-bar" hidden>
+            <span class="aipdf-chip aipdf-chip-ready" data-aipdf-role="plan"></span>
+            <span class="aipdf-chip" data-aipdf-role="pages" hidden></span>
+            <a class="aipdf-btn aipdf-btn-primary aipdf-btn-sm" data-aipdf-role="upgrade"
+                target="_blank" rel="noopener noreferrer" hidden>
+                <span data-aipdf-icon="crown" data-aipdf-size="16"></span>
+                <span data-aipdf-label="recommendedplan"></span>
+            </a>
+        </div>
+    </div>
+
+    {{! ---------------------------------------------------------- Upload tab }}
+    <section class="aipdf-panel-group" id="aipdf-panel-upload" role="tabpanel">
+
+        <div class="aipdf-panel">
+            <div class="aipdf-upload-split">
+                <div class="aipdf-dropzone" id="aipdf-dropzone" tabindex="0" role="button">
+                    <span class="aipdf-dz-icon" data-aipdf-icon="doc" data-aipdf-size="26"></span>
+                    <span id="aipdf-dropzone-label"></span>
+                </div>
+            </div>
+
+            <p class="aipdf-note">
+                <span data-aipdf-label="pdfformatonly"></span>
+                <span class="aipdf-dot">&bull;</span>
+                <span data-aipdf-label="uptofiftymb"></span>
+                <span class="aipdf-dot">&bull;</span>
+                <span class="aipdf-note-accent" data-aipdf-label="unencryptedfiles"></span>
+            </p>
+        </div>
+
+        <div class="aipdf-panel aipdf-table-panel">
+            <div class="aipdf-filters">
+                <h3 data-aipdf-label="documents"></h3>
+                <span class="aipdf-grow"></span>
+                <span class="aipdf-search">
+                    <span class="aipdf-search-icon" data-aipdf-icon="search" data-aipdf-size="16"></span>
+                    <label class="aipdf-sr-only" for="aipdf-upload-search"
+                        data-aipdf-label="searchdocuments"></label>
+                    <input class="aipdf-input aipdf-input-iconed" id="aipdf-upload-search" type="search">
+                </span>
+                <span class="aipdf-filter-group">
+                    <label for="aipdf-upload-perpage" data-aipdf-label="itemsperpage"></label>
+                    <select class="aipdf-select" id="aipdf-upload-perpage">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="aipdf-progress" id="aipdf-upload-progress" hidden>
+                <p class="aipdf-progress-label" data-aipdf-label="inprogress"></p>
+                <span class="aipdf-progress-track">
+                    <span class="aipdf-progress-fill" data-aipdf-role="fill"></span>
+                </span>
+            </div>
+
+            <div class="aipdf-table-wrap" id="aipdf-upload-tablewrap">
+                <table class="aipdf-table">
+                    <thead>
+                        <tr>
+                            <th class="aipdf-col-check" scope="col">
+                                <input type="checkbox" class="aipdf-checkbox" id="aipdf-upload-selectall">
+                                <label class="aipdf-sr-only" for="aipdf-upload-selectall"
+                                    data-aipdf-label="selectall"></label>
+                            </th>
+                            <th scope="col" data-aipdf-label="filename"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="source"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="pages"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="action"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="aipdf-upload-tbody"></tbody>
+                </table>
+                <div class="aipdf-pagination" id="aipdf-upload-pagination"></div>
+            </div>
+
+            <p class="aipdf-empty" id="aipdf-upload-empty" hidden></p>
+
+            <div class="aipdf-bulk">
+                <span class="aipdf-bulk-icon" data-aipdf-icon="doc" data-aipdf-size="20"></span>
+                <span class="aipdf-bulk-meta">
+                    <span id="aipdf-upload-selcount"></span>
+                    <span class="aipdf-bulk-sep"></span>
+                    <span id="aipdf-upload-selpages"></span>
+                </span>
+                <span class="aipdf-bulk-actions">
+                    <button type="button" class="aipdf-btn aipdf-btn-danger" id="aipdf-upload-removesel" disabled>
+                        <span data-aipdf-icon="trash" data-aipdf-size="18"></span>
+                        <span data-aipdf-label="removeselected"></span>
+                    </button>
+                    <button type="button" class="aipdf-btn aipdf-btn-primary" id="aipdf-upload-start" disabled>
+                        <span data-aipdf-icon="sparkles" data-aipdf-size="18"></span>
+                        <span data-aipdf-label="addselected"></span>
+                    </button>
+                </span>
+            </div>
+        </div>
+    </section>
+
+    {{! ---------------------------------------------------- Website scan tab }}
+    <section class="aipdf-panel-group" id="aipdf-panel-scan" role="tabpanel" hidden>
+        <div class="aipdf-panel">
+            <div class="aipdf-filters">
+                <button type="button" class="aipdf-btn aipdf-btn-outline aipdf-btn-sm"
+                    id="aipdf-crawl" hidden></button>
+                <span class="aipdf-grow"></span>
+                <span class="aipdf-search">
+                    <span class="aipdf-search-icon" data-aipdf-icon="search" data-aipdf-size="16"></span>
+                    <label class="aipdf-sr-only" for="aipdf-scan-search"
+                        data-aipdf-label="searchdocuments"></label>
+                    <input class="aipdf-input aipdf-input-iconed" id="aipdf-scan-search" type="search">
+                </span>
+                <span class="aipdf-filter-group">
+                    <label for="aipdf-scan-status" data-aipdf-label="status"></label>
+                    <select class="aipdf-select" id="aipdf-scan-status">
+                        <option value="all" data-aipdf-label="allstatus"></option>
+                        <option value="scanning" data-aipdf-label="statusscanning"></option>
+                        <option value="pending" data-aipdf-label="statuspendingscan"></option>
+                        <option value="ready" data-aipdf-label="statuspending"></option>
+                        <option value="remediated" data-aipdf-label="statusremediated"></option>
+                    </select>
+                </span>
+                <span class="aipdf-filter-group">
+                    <label for="aipdf-scan-perpage" data-aipdf-label="itemsperpage"></label>
+                    <select class="aipdf-select" id="aipdf-scan-perpage">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="aipdf-progress" id="aipdf-scan-progress" hidden>
+                <p class="aipdf-progress-label" data-aipdf-label="inprogress"></p>
+                <span class="aipdf-progress-track">
+                    <span class="aipdf-progress-fill" data-aipdf-role="fill"></span>
+                </span>
+            </div>
+
+            <div class="aipdf-table-wrap" id="aipdf-scan-tablewrap">
+                <table class="aipdf-table">
+                    <thead>
+                        <tr>
+                            <th class="aipdf-col-check" scope="col">
+                                <input type="checkbox" class="aipdf-checkbox" id="aipdf-scan-selectall">
+                                <label class="aipdf-sr-only" for="aipdf-scan-selectall"
+                                    data-aipdf-label="selectall"></label>
+                            </th>
+                            <th scope="col" data-aipdf-label="filenamesource"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="pages"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="status"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="aipdf-scan-tbody"></tbody>
+                </table>
+                <div class="aipdf-pagination" id="aipdf-scan-pagination"></div>
+            </div>
+
+            <p class="aipdf-empty" id="aipdf-scan-empty" hidden></p>
+
+            <div class="aipdf-bulk">
+                <span class="aipdf-bulk-icon" data-aipdf-icon="doc" data-aipdf-size="20"></span>
+                <span class="aipdf-bulk-meta">
+                    <span id="aipdf-scan-selcount"></span>
+                    <span class="aipdf-bulk-sep"></span>
+                    <span id="aipdf-scan-selpages"></span>
+                </span>
+                <span class="aipdf-bulk-actions">
+                    <button type="button" class="aipdf-btn aipdf-btn-primary" id="aipdf-scan-start" disabled>
+                        <span data-aipdf-icon="sparkles" data-aipdf-size="18"></span>
+                        <span data-aipdf-label="addselected"></span>
+                    </button>
+                </span>
+            </div>
+        </div>
+    </section>
+
+    {{! ----------------------------------------------------- Remediated tab }}
+    <section class="aipdf-panel-group" id="aipdf-panel-remediated" role="tabpanel" hidden>
+        <div class="aipdf-panel">
+            <div class="aipdf-filters">
+                <h3 data-aipdf-label="remediatedpdfs"></h3>
+                <span class="aipdf-grow"></span>
+                <span class="aipdf-search">
+                    <span class="aipdf-search-icon" data-aipdf-icon="search" data-aipdf-size="16"></span>
+                    <label class="aipdf-sr-only" for="aipdf-rem-search"
+                        data-aipdf-label="searchremediated"></label>
+                    <input class="aipdf-input aipdf-input-iconed" id="aipdf-rem-search" type="search">
+                </span>
+                <span class="aipdf-filter-group">
+                    <label class="aipdf-sr-only" for="aipdf-rem-source" data-aipdf-label="source"></label>
+                    <select class="aipdf-select" id="aipdf-rem-source">
+                        <option value="all" data-aipdf-label="allsources"></option>
+                        <option value="file" data-aipdf-label="sourceupload"></option>
+                        <option value="url" data-aipdf-label="sourceurlscan"></option>
+                        <option value="web" data-aipdf-label="sourcewebsite"></option>
+                    </select>
+                </span>
+                <span class="aipdf-filter-group">
+                    <label for="aipdf-rem-perpage" data-aipdf-label="itemsperpage"></label>
+                    <select class="aipdf-select" id="aipdf-rem-perpage">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="aipdf-table-wrap" id="aipdf-rem-tablewrap">
+                <table class="aipdf-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" data-aipdf-label="filename"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="addedfrom"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="remediatedon"></th>
+                            <th scope="col" class="aipdf-center" data-aipdf-label="pages"></th>
+                            <th scope="col" class="aipdf-right"><span class="aipdf-sr-only"
+                                data-aipdf-label="action"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="aipdf-rem-tbody"></tbody>
+                </table>
+                <div class="aipdf-pagination" id="aipdf-rem-pagination"></div>
+            </div>
+
+            <p class="aipdf-empty" id="aipdf-rem-empty" hidden></p>
+        </div>
+    </section>
+
+    <input type="file" id="aipdf-fileinput" accept="application/pdf,.pdf" multiple hidden>
+
+    {{! ------------------------------------------------------------- Dialogs }}
+    <div class="aipdf-overlay" id="aipdf-confirm" hidden>
+        <div class="aipdf-dialog" role="dialog" aria-modal="true" aria-labelledby="aipdf-confirm-title">
+            <div class="aipdf-dialog-head">
+                <h2 id="aipdf-confirm-title" data-aipdf-label="removedocument"></h2>
+                <button type="button" class="aipdf-dialog-close" data-aipdf-action="cancel">
+                    <span data-aipdf-icon="x" data-aipdf-size="16"></span>
+                    <span class="aipdf-sr-only" data-aipdf-label="close"></span>
+                </button>
+            </div>
+            <div class="aipdf-dialog-body">
+                <p data-aipdf-role="message"></p>
+            </div>
+            <div class="aipdf-dialog-foot">
+                <button type="button" class="aipdf-btn aipdf-btn-danger" data-aipdf-action="confirm"
+                    data-aipdf-label="remove"></button>
+                <button type="button" class="aipdf-btn aipdf-btn-secondary" data-aipdf-action="cancel"
+                    data-aipdf-label="cancel"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="aipdf-overlay" id="aipdf-suggestions" hidden>
+        <div class="aipdf-dialog aipdf-dialog-wide" role="dialog" aria-modal="true"
+            aria-labelledby="aipdf-suggestions-title">
+            <div class="aipdf-dialog-head">
+                <span>
+                    <h2 id="aipdf-suggestions-title">
+                        <span data-aipdf-icon="sparkles" data-aipdf-size="18"></span>
+                        <span data-aipdf-label="aisuggestions"></span>
+                    </h2>
+                    <p class="aipdf-muted" data-aipdf-role="subtitle"></p>
+                </span>
+                <button type="button" class="aipdf-dialog-close" data-aipdf-action="close">
+                    <span data-aipdf-icon="x" data-aipdf-size="16"></span>
+                    <span class="aipdf-sr-only" data-aipdf-label="close"></span>
+                </button>
+            </div>
+            <div class="aipdf-dialog-body" data-aipdf-role="body"></div>
+        </div>
+    </div>
+
+    {{!
+        The account the workspace registers under. Opened from the account bar,
+        pre-filled from the site's own settings — nothing here has to be filled
+        in before the workspace can be used.
+    }}
+    <div class="aipdf-overlay" id="aipdf-account" hidden>
+        <div class="aipdf-dialog" role="dialog" aria-modal="true" aria-labelledby="aipdf-account-title">
+            <form id="aipdf-account-form" novalidate>
+                <div class="aipdf-dialog-head">
+                    <span>
+                        <h2 id="aipdf-account-title" data-aipdf-label="accounttitle"></h2>
+                        <p class="aipdf-muted" data-aipdf-label="accountintro"></p>
+                    </span>
+                    <button type="button" class="aipdf-dialog-close" data-aipdf-action="close">
+                        <span data-aipdf-icon="x" data-aipdf-size="16"></span>
+                        <span class="aipdf-sr-only" data-aipdf-label="close"></span>
+                    </button>
+                </div>
+
+                <div class="aipdf-dialog-body">
+                    <p class="aipdf-field">
+                        <label for="aipdf-account-name" data-aipdf-label="accountname"></label>
+                        <input type="text" id="aipdf-account-name" class="aipdf-input"
+                            autocomplete="organization" aria-describedby="aipdf-account-name-hint">
+                        <span class="aipdf-field-error" id="aipdf-account-name-error" hidden></span>
+                        <span class="aipdf-field-hint" id="aipdf-account-name-hint"
+                            data-aipdf-label="accountnamehint"></span>
+                    </p>
+
+                    <p class="aipdf-field">
+                        <label for="aipdf-account-email" data-aipdf-label="accountemail"></label>
+                        <input type="email" id="aipdf-account-email" class="aipdf-input"
+                            autocomplete="email" aria-describedby="aipdf-account-email-hint">
+                        <span class="aipdf-field-error" id="aipdf-account-email-error" hidden></span>
+                        <span class="aipdf-field-hint" id="aipdf-account-email-hint"
+                            data-aipdf-label="accountemailhint"></span>
+                    </p>
+
+                    <p class="aipdf-field">
+                        <label for="aipdf-account-domain" data-aipdf-label="accountdomain"></label>
+                        <input type="text" id="aipdf-account-domain" class="aipdf-input"
+                            autocomplete="url" aria-describedby="aipdf-account-domain-hint">
+                        <span class="aipdf-field-error" id="aipdf-account-domain-error" hidden></span>
+                        <span class="aipdf-field-hint" id="aipdf-account-domain-hint"
+                            data-aipdf-label="accountdomainhint"></span>
+                    </p>
+
+                    <div class="aipdf-notice aipdf-notice-error" data-aipdf-role="failure" hidden>
+                        <span class="aipdf-notice-icon" data-aipdf-icon="warning"
+                            data-aipdf-size="20"></span>
+                        <span>
+                            <strong data-aipdf-label="accountfailed"></strong>
+                            <p data-aipdf-role="failure-text"></p>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="aipdf-dialog-foot">
+                    <button type="button" class="aipdf-btn aipdf-btn-ghost"
+                        data-aipdf-action="account-cancel" data-aipdf-label="cancel"></button>
+                    <button type="submit" class="aipdf-btn aipdf-btn-primary"
+                        data-aipdf-action="account-save">
+                        <span data-aipdf-icon="sparkles" data-aipdf-size="17"></span>
+                        <span data-aipdf-role="account-save-label"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="aipdf-overlay" id="aipdf-coverage" hidden>
+        <div class="aipdf-dialog" role="dialog" aria-modal="true" aria-labelledby="aipdf-coverage-title">
+            <div class="aipdf-dialog-body">
+                <div class="aipdf-notice">
+                    <span class="aipdf-notice-icon" data-aipdf-role="icon"></span>
+                    <span>
+                        <h2 id="aipdf-coverage-title" data-aipdf-role="title"></h2>
+                        <p data-aipdf-role="body"></p>
+                    </span>
+                </div>
+                <p class="aipdf-pill" data-aipdf-role="recommended" hidden>
+                    <span data-aipdf-icon="crown" data-aipdf-size="18"></span>
+                    <span data-aipdf-role="recommended-text"></span>
+                </p>
+                <p class="aipdf-check-row" data-aipdf-role="accept-row">
+                    <input type="checkbox" id="aipdf-coverage-accept">
+                    <label for="aipdf-coverage-accept" data-aipdf-role="accept-label"></label>
+                </p>
+            </div>
+            <div class="aipdf-dialog-foot aipdf-dialog-foot-split" data-aipdf-role="actions">
+                <button type="button" class="aipdf-btn aipdf-btn-primary" data-aipdf-action="upgrade">
+                    <span data-aipdf-icon="crown" data-aipdf-size="17"></span>
+                    <span data-aipdf-role="upgrade-label"></span>
+                </button>
+                <button type="button" class="aipdf-btn aipdf-btn-ghost"
+                    data-aipdf-action="coverage-cancel" hidden>
+                    <span data-aipdf-label="cancel"></span>
+                </button>
+                <button type="button" class="aipdf-btn aipdf-btn-primary" data-aipdf-action="continue" disabled>
+                    <span data-aipdf-icon="sparkles" data-aipdf-size="17"></span>
+                    <span data-aipdf-label="startairemediation"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="aipdf-loader" id="aipdf-loader" role="status" hidden>
+        <span class="aipdf-spinner"></span>
+        <span class="aipdf-sr-only" data-aipdf-label="loading"></span>
+    </div>
+
+    <div class="aipdf-toast" id="aipdf-toast" role="status" hidden></div>
+</div>
