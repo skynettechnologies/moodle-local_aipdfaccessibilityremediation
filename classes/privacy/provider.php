@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-
-namespace local_aipdfaccessibilityremediation\privacy;
+namespace local_freeaipdfaccessibilityremediation\privacy;
 
 use core_privacy\local\metadata\collection;
 
@@ -27,7 +26,7 @@ use core_privacy\local\metadata\collection;
  * documents an administrator uploads are processed by that service, so both
  * transfers are declared as an external location.
  *
- * @package     local_aipdfaccessibilityremediation
+ * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -40,15 +39,15 @@ class provider implements \core_privacy\local\metadata\provider {
      */
     public static function get_metadata(collection $collection): collection {
         $collection->add_external_location_link(
-            'aipdfaccessibilityremediation',
+            'freeaipdfaccessibilityremediation',
             [
-                'website' => 'privacy:metadata:aipdfaccessibilityremediation:website',
-                'name' => 'privacy:metadata:aipdfaccessibilityremediation:name',
-                'email' => 'privacy:metadata:aipdfaccessibilityremediation:email',
-                'company_name' => 'privacy:metadata:aipdfaccessibilityremediation:company_name',
-                'documents' => 'privacy:metadata:aipdfaccessibilityremediation:documents',
+                'website' => 'privacy:metadata:freeaipdfaccessibilityremediation:website',
+                'name' => 'privacy:metadata:freeaipdfaccessibilityremediation:name',
+                'email' => 'privacy:metadata:freeaipdfaccessibilityremediation:email',
+                'company_name' => 'privacy:metadata:freeaipdfaccessibilityremediation:company_name',
+                'documents' => 'privacy:metadata:freeaipdfaccessibilityremediation:documents',
             ],
-            'privacy:metadata:aipdfaccessibilityremediation'
+            'privacy:metadata:freeaipdfaccessibilityremediation'
         );
 
         return $collection;

@@ -19,10 +19,11 @@
  *
  * The plugin has no configurable settings. The service address is fixed and
  * the account is derived from the site itself, so an administrator is never
- * asked to supply anything and no new settings appear at upgrade time. Only
- * the workspace page is registered.
+ * asked to supply anything and no new settings appear at upgrade time.
  *
- * @package     local_aipdfaccessibilityremediation
+ * Only the workspace page is registered.
+ *
+ * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -31,9 +32,9 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
     $ADMIN->add('localplugins', new admin_externalpage(
-        'local_aipdfaccessibilityremediation',
-        get_string('pluginname', 'local_aipdfaccessibilityremediation'),
-        new moodle_url('/local/aipdfaccessibilityremediation/index.php'),
-        'local/aipdfaccessibilityremediation:manage'
+        'local_freeaipdfaccessibilityremediation',
+        get_string('pluginname', 'local_freeaipdfaccessibilityremediation'),
+        new moodle_url('/local/freeaipdfaccessibilityremediation/index.php'),
+        'local/freeaipdfaccessibilityremediation:manage'
     ));
 }

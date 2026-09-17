@@ -20,7 +20,7 @@
  * The interface is written without relying on any framework, so it renders the
  * same on every theme.
  *
- * @package    local_aipdfaccessibilityremediation
+ * @package    local_freeaipdfaccessibilityremediation
  * @copyright  2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -28,6 +28,7 @@
 .aipdf-app {
     --aipdf-primary: #420083;
     --aipdf-primary-dark: #33006a;
+    --aipdf-primary-hover: #7423cc;
     --aipdf-accent: #5c17a8;
     --aipdf-accent-soft: #ece1f7;
     --aipdf-accent-softer: #f5eefc;
@@ -45,9 +46,39 @@
     --aipdf-surface-alt: #f8f9fa;
     --aipdf-border: rgba(0, 0, 0, 0.12);
     --aipdf-radius: 10px;
+    background: var(--aipdf-surface);
     box-sizing: border-box;
     color: var(--aipdf-text);
+    /* The workspace is drawn in one palette. Saying so keeps the browser from
+       darkening the things it owns: form controls, scrollbars, autofill. */
+    color-scheme: light;
     position: relative;
+}
+
+/* A browser set to dark must not repaint the workspace. The palette above is
+   the design; the site around it may go dark, and this stays as it is. */
+@media (prefers-color-scheme: dark) {
+    .aipdf-app {
+        --aipdf-accent-soft: #ece1f7;
+        --aipdf-accent-softer: #f5eefc;
+        --aipdf-border: rgba(0, 0, 0, 0.12);
+        --aipdf-muted: #5d5470;
+        --aipdf-surface: #fff;
+        --aipdf-surface-alt: #f8f9fa;
+        --aipdf-text: #1c0a36;
+        background: #fff;
+        color: #1c0a36;
+        color-scheme: light;
+    }
+}
+
+/* Controls inherit their colours from the page unless told otherwise, and the
+   page may be dark. */
+.aipdf-app input,
+.aipdf-app select,
+.aipdf-app textarea {
+    background: var(--aipdf-surface);
+    color: var(--aipdf-text);
 }
 
 .aipdf-app *,
@@ -284,8 +315,10 @@
     color: var(--aipdf-text);
 }
 
-.aipdf-btn-ghost:hover {
-    background: var(--aipdf-surface-alt);
+.aipdf-btn-ghost:not(:disabled):hover {
+    background: var(--aipdf-accent-softer);
+    border-color: var(--aipdf-accent);
+    color: var(--aipdf-accent);
 }
 
 .aipdf-btn-primary {
@@ -293,7 +326,15 @@
     color: #fff;
 }
 
+/* Lighter on hover, not darker. The resting colour is already dark enough
+   that darkening it further is all but invisible, which is what made these
+   buttons feel unresponsive. Pressing them does darken, so the two states
+   stay distinguishable. */
 .aipdf-btn-primary:not(:disabled):hover {
+    background: var(--aipdf-primary-hover);
+}
+
+.aipdf-btn-primary:not(:disabled):active {
     background: var(--aipdf-primary-dark);
 }
 
@@ -314,6 +355,11 @@
     color: var(--aipdf-text);
 }
 
+.aipdf-btn-secondary:not(:disabled):hover {
+    background: var(--aipdf-accent-soft);
+    border-color: var(--aipdf-accent);
+}
+
 .aipdf-btn-danger {
     background: var(--aipdf-danger);
     color: #fff;
@@ -326,6 +372,10 @@
 .aipdf-btn-soft {
     background: rgba(66, 0, 131, 0.08);
     color: var(--aipdf-accent);
+}
+
+.aipdf-btn-soft:not(:disabled):hover {
+    background: var(--aipdf-accent-soft);
 }
 
 .aipdf-link-danger {
@@ -469,6 +519,13 @@
     justify-content: flex-end;
 }
 
+.aipdf-connection-error {
+    background: var(--aipdf-danger-bg);
+    border-radius: var(--aipdf-radius);
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+}
+
 /* ----------------------------------------------- Account and plan bars */
 
 .aipdf-status-bars {
@@ -495,6 +552,76 @@
 
 .aipdf-account-who b {
     color: var(--aipdf-text);
+}
+
+/* ------------------------------------------------------- Hover and focus */
+
+/* One of these buttons is a link — it goes to the dashboard, so middle-click
+   and "open in new tab" should work. The theme styles a:hover more
+   specifically than a class can (an element plus a pseudo-class beats a single
+   class), which repainted the label and underlined it on hover. These say what
+   a button looks like in every link state, specifically enough to hold. */
+.aipdf-app a.aipdf-btn,
+.aipdf-app a.aipdf-btn:link,
+.aipdf-app a.aipdf-btn:visited,
+.aipdf-app a.aipdf-btn:hover,
+.aipdf-app a.aipdf-btn:focus,
+.aipdf-app a.aipdf-btn:active {
+    text-decoration: none;
+}
+
+.aipdf-app a.aipdf-btn-primary,
+.aipdf-app a.aipdf-btn-primary:link,
+.aipdf-app a.aipdf-btn-primary:visited,
+.aipdf-app a.aipdf-btn-primary:hover,
+.aipdf-app a.aipdf-btn-primary:focus,
+.aipdf-app a.aipdf-btn-primary:active {
+    color: #fff;
+}
+
+.aipdf-app a.aipdf-btn-primary:not(:disabled):hover {
+    background: var(--aipdf-primary-hover);
+}
+
+.aipdf-app a.aipdf-btn-primary:not(:disabled):active {
+    background: var(--aipdf-primary-dark);
+}
+
+
+.aipdf-link-danger:not(:disabled):hover {
+    background: var(--aipdf-danger-bg);
+    text-decoration: underline;
+}
+
+.aipdf-page-link:not(:disabled):hover {
+    background: var(--aipdf-accent-soft);
+    color: var(--aipdf-accent);
+}
+
+.aipdf-chip-button:not(:disabled):hover {
+    background: var(--aipdf-warning);
+    color: #fff;
+}
+
+.aipdf-dialog-close:hover {
+    background: var(--aipdf-surface-alt);
+    color: var(--aipdf-text);
+}
+
+.aipdf-tab:hover .aipdf-tab-icon {
+    color: inherit;
+}
+
+/* The keyboard gets what the mouse gets. Without this the only cue is
+   whatever the browser draws by default, which on a purple control is often
+   nothing worth seeing. */
+.aipdf-app a:focus-visible,
+.aipdf-app button:focus-visible,
+.aipdf-app input:focus-visible,
+.aipdf-app select:focus-visible,
+.aipdf-app [tabindex]:focus-visible {
+    outline: 3px solid var(--aipdf-accent);
+    outline-offset: 2px;
 }
 
 /* ----------------------------------------------------------------- Chips */
@@ -760,38 +887,6 @@
     margin-bottom: 0.25rem;
 }
 
-/* --------------------------------------------------------- Account fields */
-
-.aipdf-field {
-    display: block;
-    margin-bottom: 1rem;
-}
-
-.aipdf-field label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.35rem;
-}
-
-.aipdf-field-error,
-.aipdf-field-hint {
-    display: block;
-    font-size: 0.8rem;
-    margin-top: 0.35rem;
-}
-
-.aipdf-field-hint {
-    color: var(--aipdf-muted);
-}
-
-.aipdf-field-error {
-    color: var(--aipdf-danger);
-}
-
-.aipdf-input[aria-invalid="true"] {
-    border-color: var(--aipdf-danger);
-}
-
 .aipdf-notice {
     display: flex;
     gap: 1rem;
@@ -836,132 +931,6 @@
     margin: 0;
 }
 
-/* ----------------------------------------------------------- Suggestions */
-
-.aipdf-sug-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-bottom: 1rem;
-}
-
-.aipdf-sug-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-}
-
-.aipdf-sug-item {
-    border: 1px solid var(--aipdf-border);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.aipdf-sug-item-failed {
-    border-color: rgba(180, 83, 9, 0.45);
-}
-
-.aipdf-sug-row {
-    align-items: center;
-    background: none;
-    border: 0;
-    cursor: pointer;
-    display: flex;
-    gap: 0.6rem;
-    padding: 0.6rem 0.85rem;
-    text-align: left;
-    width: 100%;
-}
-
-.aipdf-sug-row:hover {
-    background: var(--aipdf-surface-alt);
-}
-
-.aipdf-sug-dot {
-    align-items: center;
-    border-radius: 50%;
-    display: flex;
-    flex: none;
-    height: 1.5rem;
-    justify-content: center;
-    width: 1.5rem;
-}
-
-.aipdf-sug-dot-passed {
-    background: var(--aipdf-success-bg);
-    color: var(--aipdf-success);
-}
-
-.aipdf-sug-dot-failed {
-    background: var(--aipdf-warning-bg);
-    color: var(--aipdf-warning);
-}
-
-.aipdf-sug-title {
-    font-weight: 600;
-}
-
-.aipdf-sug-detail {
-    color: var(--aipdf-muted);
-    flex: 1 1 auto;
-    font-size: 0.85rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.aipdf-sug-caret {
-    color: var(--aipdf-muted);
-    flex: none;
-}
-
-.aipdf-sug-body {
-    padding: 0.25rem 1rem 1rem 3.2rem;
-}
-
-.aipdf-sug-body p {
-    margin-bottom: 0.75rem;
-}
-
-.aipdf-sug-example {
-    display: grid;
-    gap: 0.6rem;
-    grid-template-columns: 1fr 1fr;
-}
-
-.aipdf-sug-example-col {
-    border: 1px solid var(--aipdf-border);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.aipdf-sug-example-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 0.35rem 0.6rem;
-    text-transform: uppercase;
-}
-
-.aipdf-sug-example-before .aipdf-sug-example-label {
-    background: var(--aipdf-danger-bg);
-    color: var(--aipdf-danger);
-}
-
-.aipdf-sug-example-after .aipdf-sug-example-label {
-    background: var(--aipdf-success-bg);
-    color: var(--aipdf-success);
-}
-
-.aipdf-sug-example pre {
-    background: var(--aipdf-surface-alt);
-    font-size: 0.8rem;
-    margin: 0;
-    padding: 0.6rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
 /* --------------------------------------------------------- Toast, loader */
 
 .aipdf-toast {
@@ -986,6 +955,25 @@
 
 .aipdf-toast-error {
     background: #7f1d1d;
+}
+
+/* Until the module has painted the page, the shell is held back and only the
+   loading line is shown. */
+.aipdf-app.aipdf-booting > *:not(.aipdf-boot) {
+    display: none;
+}
+
+.aipdf-app:not(.aipdf-booting) > .aipdf-boot {
+    display: none;
+}
+
+.aipdf-boot {
+    align-items: center;
+    color: var(--aipdf-muted);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    padding: 4rem 1.25rem;
 }
 
 .aipdf-loader {
@@ -1039,9 +1027,6 @@
 /* ------------------------------------------------------------ Small screens */
 
 @media (max-width: 62rem) {
-    .aipdf-sug-example {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 48rem) {
@@ -1060,33 +1045,5 @@
 
     .aipdf-search .aipdf-input {
         min-width: 0;
-    }
-
-    .aipdf-sug-detail {
-        display: none;
-    }
-}
-
-/* --------------------------------------------------------------- Dark mode */
-
-@media (prefers-color-scheme: dark) {
-    .aipdf-app {
-        --aipdf-accent: #b98cff;
-        --aipdf-accent-soft: #2d2050;
-        --aipdf-accent-softer: #221a3d;
-        --aipdf-success-bg: #10331f;
-        --aipdf-warning-bg: #3a2410;
-        --aipdf-danger-bg: #3d1b24;
-        --aipdf-info-bg: #0c3552;
-        --aipdf-info: #7dd3fc;
-        --aipdf-text: #eceafd;
-        --aipdf-muted: #b9b6d4;
-        --aipdf-surface: #1c1832;
-        --aipdf-surface-alt: #221d3d;
-        --aipdf-border: rgba(255, 255, 255, 0.15);
-    }
-
-    .aipdf-loader {
-        background: rgba(0, 0, 0, 0.6);
     }
 }

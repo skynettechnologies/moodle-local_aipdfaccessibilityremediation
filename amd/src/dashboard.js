@@ -13,6 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+import Log from 'core/log';
+import Templates from 'core/templates';
+
 /**
  * AI PDF Accessibility Remediation workspace.
  *
@@ -25,7 +28,7 @@
  * session, receives only the short lived token, and uses that to talk to the
  * remediation service directly.
  *
- * @module     local_aipdfaccessibilityremediation/dashboard
+ * @module     local_freeaipdfaccessibilityremediation/dashboard
  * @copyright  2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -33,18 +36,25 @@
 /** @type {Object} Runtime configuration supplied by the page. */
 var CFG = {
     apiBaseUrl: '',
-    sessionUrl: '',
-    sesskey: '',
     website: '',
     upgradeUrl: '',
     accountKey: '',
     account: null,
     accountDefaults: null,
+    debug: false,
+    provision: null,
     strings: {}
 };
 
 /** @type {Number} Percentage of a plan used before its chip turns amber. */
 var PLAN_WARN_AT = 80;
+
+/** @type {Object} Language string naming what each tab is for. */
+var SUBTITLES = {
+    upload: 'subtitleupload',
+    scan: 'subtitlescan',
+    remediated: 'subtitleremediated'
+};
 
 /** @type {Object} Everything the interface currently shows. */
 var state = {
@@ -60,6 +70,7 @@ var state = {
     account: null,
     accountDraft: null,
     coverage: null,
+    signinfailure: null,
     upload: {page: 1, perPage: 10, search: '', docs: [], total: 0},
     scan: {page: 1, perPage: 10, search: '', status: 'all', docs: [], total: 0},
     rem: {page: 1, perPage: 10, search: '', source: 'all', docs: [], total: 0}
@@ -110,6 +121,30 @@ var icon = function(name, size) {
 };
 
 /**
+ * Writes a diagnostic line to the browser console.
+ *
+ * Silent unless the plugin's log is on, which is also what puts the matching
+ * entries in the server side log, so the two can be read side by side.
+ *
+ * Warn rather than debug: this is asked for, and debug is filtered out unless
+ * Moodle is running at developer level, which is a second thing to switch on.
+ *
+ * @param {String} label What the line is about.
+ * @param {Object} detail Values worth seeing.
+ */
+var trace = function(label, detail) {
+    if (!CFG.debug) {
+        return;
+    }
+
+    try {
+        Log.warn(JSON.stringify(detail), 'AI PDF Remediation ' + label);
+    } catch (e) {
+        Log.warn(String(detail), 'AI PDF Remediation ' + label);
+    }
+};
+
+/**
  * Returns a translated string.
  *
  * @param {String} key Language string identifier.
@@ -135,20 +170,6 @@ var fmt = function(key, values) {
         text = text.split('{' + name + '}').join(String(values[name]));
     });
     return text;
-};
-
-/**
- * Escapes text for safe insertion into markup.
- *
- * @param {*} value Any value.
- * @returns {String} The escaped text.
- */
-var esc = function(value) {
-    return String(value === null || value === undefined ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
 };
 
 /**
@@ -228,6 +249,15 @@ var toast = function(message, kind) {
 };
 
 /**
+ * Reveals the workspace, once there is something in it worth looking at.
+ */
+var ready = function() {
+    if (root) {
+        root.classList.remove('aipdf-booting');
+    }
+};
+
+/**
  * Shows or hides the busy overlay.
  *
  * Reference counted, so overlapping requests do not hide each other's overlay.
@@ -244,144 +274,182 @@ var loading = function(on) {
  * ------------------------------------------------------------------------ */
 
 /**
- * Returns the storage key for the session token.
+ * @type {String|null} The session token, for as long as this page is open.
  *
- * The account is folded into the key, so a site that changes address finds no
- * token and signs in again rather than silently reusing the old account.
- *
- * @returns {String} localStorage key.
+ * This is the authority, and storage below is only a cache of it. The two are
+ * not interchangeable: a browser can refuse to store site data — a private
+ * window, blocked cookies, an enterprise policy — and when that happened to be
+ * the only copy, the token vanished the moment it arrived and every request
+ * after a successful registration went out unauthorised.
  */
-var storageKey = function() {
+var sessionToken = null;
+
+/**
+ * Returns the key the token is cached under.
+ *
+ * The fingerprint comes from the server, which derives it from the address and
+ * the domain the account is registered against. Folding it in means a site
+ * that changes either finds no token and registers again, rather than
+ * presenting one belonging to an account it no longer uses.
+ *
+ * @returns {String} A storage key.
+ */
+var tokenKey = function() {
     return CFG.accountKey ? 'aipdf_token_' + CFG.accountKey : 'aipdf_token';
 };
 
 /**
- * Reads the stored session token.
+ * Returns the session token, from this page or from the last visit.
  *
- * @returns {String|null} The token, when one is held.
+ * @returns {String|null} The token.
  */
 var getToken = function() {
-    try {
-        return window.localStorage.getItem(storageKey());
-    } catch (e) {
-        return null;
+    if (sessionToken) {
+        return sessionToken;
     }
+
+    try {
+        sessionToken = window.localStorage.getItem(tokenKey());
+    } catch (e) {
+        // Storage unreadable. Registration happens again instead, which costs
+        // one call and is not a failure.
+        sessionToken = null;
+    }
+
+    return sessionToken;
 };
 
 /**
- * Stores or clears the session token.
+ * Holds the session token, and keeps a copy for the next visit.
  *
  * @param {String|null} value The token, or null to forget it.
  */
 var setToken = function(value) {
+    sessionToken = value || null;
+
     try {
         if (value) {
-            window.localStorage.setItem(storageKey(), value);
+            window.localStorage.setItem(tokenKey(), value);
         } else {
-            window.localStorage.removeItem(storageKey());
+            window.localStorage.removeItem(tokenKey());
         }
     } catch (e) {
-        // Storage unavailable: requests simply go unauthenticated and the
-        // session is fetched again on the next action.
-        return;
+        // The token is already held above, so this page is unaffected; only
+        // the saved copy for the next visit is lost.
+        trace('token kept for this page only', {reason: String(e)});
     }
 };
 
 /**
- * Asks Moodle for a remediation session.
+ * Makes sure there is a token, registering the site only if there is not.
  *
- * Corrected account details, when given, travel with the request: Moodle stores
- * them and provisions against them, so the session that comes back belongs to
- * the account the administrator asked for. The provisioning key stays on the
- * server either way.
- *
- * @param {Object|null} account Optional name, email and domain to save first.
- * @returns {Promise} Resolves an object with "ok", and the account in force.
- */
-var signIn = function(account) {
-    var body = account ? JSON.stringify({account: account}) : null;
-
-    return fetch(CFG.sessionUrl + '?sesskey=' + encodeURIComponent(CFG.sesskey), {
-        method: 'POST',
-        headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
-        credentials: 'same-origin',
-        body: body
-    }).then(function(response) {
-        return response.json().catch(function() {
-            return {};
-        }).then(function(data) {
-            if (!response.ok || !data || !data.token) {
-                // The endpoint explains itself; pass its wording on so a
-                // rejected address says why rather than just failing.
-                var error = new Error((data && data.error) || str('unauthenticated'));
-                error.handled = Boolean(data && data.error);
-                throw error;
-            }
-            setToken(data.token);
-            return {ok: true, account: data.account || null};
-        });
-    });
-};
-
-/**
- * Ensures a session exists, reusing the stored token when there is one.
- *
- * @returns {Promise} Resolves true when the workspace can make requests.
+ * @returns {Promise} Resolves once the workspace can make requests.
  */
 var ensureSession = function() {
-    if (getToken()) {
-        return Promise.resolve(true);
+    var token = getToken();
+
+    if (token) {
+        trace('reusing the stored token', {tokenlength: token.length, key: tokenKey()});
+        return Promise.resolve({ok: true, account: CFG.account || null});
     }
-    return signIn(null).then(function(result) {
-        return result.ok;
-    }).catch(function() {
-        return false;
-    });
+
+    return signIn(null);
 };
 
 /**
- * Returns the storage key for the job this site last left running.
+ * Shows, or clears, the standing notice that the site is not connected.
  *
- * @returns {String} localStorage key.
+ * @param {String|null} reason The service's own wording, or null to clear it.
  */
-var jobKey = function() {
-    return storageKey() + '_job';
-};
+var showConnectionError = function(reason) {
+    var notice = el('aipdf-connection-error');
 
-/**
- * Remembers, or forgets, a remediation job that is still running.
- *
- * The service keeps working whether or not this page is open, so the id is
- * kept and the run is picked back up on the next visit instead of appearing
- * to have stopped.
- *
- * @param {String|null} id The job id, or null to forget it.
- */
-var setActiveJob = function(id) {
-    try {
-        if (id) {
-            window.localStorage.setItem(jobKey(), id);
-        } else {
-            window.localStorage.removeItem(jobKey());
-        }
-    } catch (e) {
-        // Storage unavailable: the run still finishes, it just cannot be
-        // picked up again after a reload.
+    if (!notice) {
         return;
     }
+
+    if (reason) {
+        notice.querySelector('[data-aipdf-role="connection-detail"]').textContent = reason;
+    }
+
+    show(notice, Boolean(reason));
 };
 
 /**
- * Returns the job this site left running, if any.
+ * Registers the site and opens a session on it.
  *
- * @returns {String|null} The job id.
+ * The call is made from the page rather than from the server, so that the
+ * request, the response and any CORS preflight appear in the network panel
+ * beside every other request the workspace makes.
+ *
+ * @param {Object|null} account Name, email and domain to send instead of the
+ *                              ones the page was given.
+ * @returns {Promise} Resolves an object with "ok" and the account used.
  */
-var activeJob = function() {
-    try {
-        return window.localStorage.getItem(jobKey());
-    } catch (e) {
-        return null;
+var signIn = function(account) {
+    var payload = {};
+    var answer = null;
+
+    Object.keys(CFG.provision.payload).forEach(function(key) {
+        payload[key] = CFG.provision.payload[key];
+    });
+
+    if (account) {
+        // The service's own field names, which are not this project's style;
+        // held as strings so that neither the naming rule nor the dot notation
+        // rule has an opinion about them.
+        var company = 'company_name';
+
+        payload.name = account.name || payload.name;
+        payload.email = account.email || payload.email;
+        payload[company] = account.name || payload[company];
+        payload.website = account.domain || payload.website;
     }
+
+    trace('provision-account, from the browser', {url: CFG.provision.url, request: payload});
+
+    return fetch(CFG.provision.url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Api-Key': CFG.provision.apiKey},
+        body: JSON.stringify(payload)
+    }).then(function(response) {
+        answer = response;
+        return response.json();
+    }).catch(function(error) {
+        if (answer) {
+            return {};
+        }
+        // The request never reached the service. A preflight the service does
+        // not answer looks exactly like this, and says only "failed to fetch".
+        trace('provision-account never completed', {error: String(error)});
+        throw new Error(String(error && error.message ? error.message : error));
+    }).then(function(data) {
+        trace('provision-account answered', {
+            status: answer.status,
+            ok: answer.ok,
+            isNewToApp: data.isNewToApp,
+            error: data.error,
+            code: data.code,
+            tokenlength: data.token ? data.token.length : 0
+        });
+
+        return data;
+    }).then(function(data) {
+        if (answer.ok && data.token) {
+            setToken(data.token);
+            state.signinfailure = null;
+            showConnectionError(null);
+
+            return {
+                ok: true,
+                account: {name: payload.name, email: payload.email, domain: payload.website}
+            };
+        }
+
+        var reason = data.error || fmt('errorbadresponse', String(answer.status));
+
+        throw new Error(reason);
+    });
 };
 
 /**
@@ -392,6 +460,30 @@ var activeJob = function() {
  */
 var apiUrl = function(path) {
     return CFG.apiBaseUrl + '/api' + path;
+};
+
+/**
+ * Signs in again and replays a request the service turned away.
+ *
+ * @param {String} path Endpoint path, as originally requested.
+ * @param {Object} options Fetch options, as originally requested.
+ * @param {Number} status Status of the response that prompted the retry.
+ * @param {Object} data Body of that response.
+ * @returns {Promise} Resolves with the replayed response.
+ */
+var replay = function(path, options, status, data) {
+    if (state.signinfailure) {
+        throw buildError(status, data);
+    }
+
+    return signIn(null).catch(function(error) {
+        // Report what the service said the first time. That a fresh sign in
+        // also failed is a symptom, not the thing worth showing.
+        state.signinfailure = (error && error.message) || str('unauthenticated');
+        throw buildError(status, data);
+    }).then(function() {
+        return request(path, options, true);
+    });
 };
 
 /**
@@ -410,9 +502,19 @@ var request = function(path, options, isRetry) {
     options = options || {};
     var headers = {};
     var token = getToken();
+    var answer = null;
 
     if (token) {
         headers.Authorization = 'Bearer ' + token;
+    } else if (state.signinfailure) {
+        // Nothing was ever issued, so this request would go out unauthorised
+        // and come back 401. Answering here keeps the reason the service gave
+        // in front of the caller, instead of burying it under a row of 401s
+        // that say only that a token was missing.
+        trace('request not sent, no session', {path: path, reason: state.signinfailure});
+        return Promise.reject(buildError(0, {error: state.signinfailure}));
+    } else {
+        trace('request with no token', {path: path});
     }
     if (options.body && !(options.body instanceof FormData)) {
         headers['Content-Type'] = 'application/json';
@@ -423,23 +525,27 @@ var request = function(path, options, isRetry) {
         body: options.body,
         headers: headers
     }).then(function(response) {
-        return response.json().catch(function() {
+        // Held aside so that the step below can see the status as well as the
+        // body: the two arrive from different promises.
+        answer = response;
+        return response.json();
+    }).catch(function(error) {
+        // A body that will not parse is not itself the failure. The service
+        // answers some errors with nothing at all, and the status says what
+        // happened; only a request that never arrived is rethrown here.
+        if (answer) {
             return {};
-        }).then(function(data) {
-            if (response.ok) {
-                return data;
-            }
-            if (response.status === 401 && !isRetry) {
-                setToken(null);
-                return signIn().then(function(ok) {
-                    if (!ok) {
-                        return Promise.reject(buildError(response.status, data));
-                    }
-                    return request(path, options, true);
-                });
-            }
-            return Promise.reject(buildError(response.status, data));
-        });
+        }
+        throw error;
+    }).then(function(data) {
+        if (answer.ok) {
+            return data;
+        }
+        if (answer.status === 401 && !isRetry) {
+            setToken(null);
+            return replay(path, options, answer.status, data);
+        }
+        throw buildError(answer.status, data);
     });
 };
 
@@ -451,6 +557,8 @@ var request = function(path, options, isRetry) {
  * @returns {Error} The error to reject with.
  */
 var buildError = function(status, data) {
+    trace('service refused a request', {status: status, data: data});
+
     var error = new Error(data && data.error ? data.error : str('startfailed'));
     error.status = status;
     error.code = data ? data.code : undefined;
@@ -466,7 +574,7 @@ var buildError = function(status, data) {
  */
 var reportError = function(error, fallbackKey) {
     if (error && error.status === 401) {
-        toast(str('unauthenticated'), 'error');
+        toast(state.signinfailure || str('unauthenticated'), 'error');
         return;
     }
     toast((error && error.message) || str(fallbackKey), 'error');
@@ -475,6 +583,19 @@ var reportError = function(error, fallbackKey) {
 /* ------------------------------------------------------------------------ *
  * Endpoints
  * ------------------------------------------------------------------------ */
+
+/**
+ * Asks the service to scan one document for its page count.
+ *
+ * @param {String} id Document identifier.
+ * @returns {Promise} Resolves when the scan has been requested.
+ */
+var scanDocument = function(id) {
+    return request('/documents/' + id + '/scan', {method: 'POST'}).catch(function() {
+        // One document that will not scan should not stop the rest.
+        return null;
+    });
+};
 
 /**
  * Fetches one page of documents for a tab.
@@ -608,16 +729,52 @@ var refreshBulk = function() {
  * ------------------------------------------------------------------------ */
 
 /**
+ * Draws every icon a piece of markup asks for.
+ *
+ * Templates name an icon rather than carrying its path data, so this runs over
+ * the static page once at startup and over each batch of rows as it arrives.
+ *
+ * @param {Element} scope Element whose descendants should be painted.
+ */
+var paintIcons = function(scope) {
+    scope.querySelectorAll('[data-aipdf-icon]').forEach(function(node) {
+        var size = Number(node.getAttribute('data-aipdf-size')) || 20;
+        node.innerHTML = icon(node.getAttribute('data-aipdf-icon'), size);
+    });
+};
+
+/**
+ * Renders a table's rows from a template and puts them in place.
+ *
+ * The row handlers are bound to the table body rather than to the rows, so
+ * replacing the contents leaves them working.
+ *
+ * @param {String} name Template name within this plugin.
+ * @param {Array} rows Context rows, already translated and formatted.
+ * @param {Element} tbody Table body to fill.
+ * @returns {Promise} Resolves once the rows are on the page.
+ */
+var renderRows = function(name, rows, tbody) {
+    return Templates.render('local_freeaipdfaccessibilityremediation/' + name, {rows: rows})
+        .then(function(html) {
+            Templates.replaceNodeContents(tbody, html, '');
+            paintIcons(tbody);
+            return null;
+        }).catch(function() {
+            // A template that will not render is not worth a message of its
+            // own: the table simply stays as it was.
+            return null;
+        });
+};
+
+/**
  * Writes every static label and icon into the template.
  */
 var renderStatic = function() {
     root.querySelectorAll('[data-aipdf-label]').forEach(function(node) {
         node.textContent = str(node.getAttribute('data-aipdf-label'));
     });
-    root.querySelectorAll('[data-aipdf-icon]').forEach(function(node) {
-        var size = Number(node.getAttribute('data-aipdf-size')) || 20;
-        node.innerHTML = icon(node.getAttribute('data-aipdf-icon'), size);
-    });
+    paintIcons(root);
     el('aipdf-dropzone-label').textContent = str('draganddrop');
     el('aipdf-upload-search').placeholder = str('searchdocuments');
     el('aipdf-scan-search').placeholder = str('searchdocuments');
@@ -660,18 +817,19 @@ var renderPlanBar = function() {
 
     // Keyed off what is left rather than the percentage, so the last page of a
     // large plan still reads as "nearly out" and zero always reads as empty.
-    var tone = remaining <= 0
-        ? 'aipdf-chip-error'
-        : percent >= PLAN_WARN_AT ? 'aipdf-chip-pending' : 'aipdf-chip-remediated';
+    var tone = 'aipdf-chip-remediated';
+
+    if (remaining <= 0) {
+        tone = 'aipdf-chip-error';
+    } else if (percent >= PLAN_WARN_AT) {
+        tone = 'aipdf-chip-pending';
+    }
 
     bar.querySelector('[data-aipdf-role="plan"]').textContent = user.planName;
 
     var pages = bar.querySelector('[data-aipdf-role="pages"]');
     pages.className = 'aipdf-chip ' + tone;
-    pages.textContent = fmt('pagesleft', {
-        remaining: remaining.toLocaleString(),
-        total: allowance.toLocaleString()
-    });
+    pages.textContent = fmt('pagesleft', remaining.toLocaleString());
     show(pages, metered);
 
     // An anchor rather than a button: it goes somewhere, so middle-click and
@@ -702,63 +860,75 @@ var renderPagination = function(container, view, onChange) {
     var last = view.page === totalPages || totalPages === 0;
     var windowStart = Math.max(1, view.page - 1);
     var windowEnd = Math.min(totalPages, windowStart + 2);
-    var pages = [];
-    var i;
+    var items = [
+        {symbol: '\u00AB', target: 1, disabled: first, current: false},
+        {symbol: '\u2039', target: view.page - 1, disabled: first, current: false}
+    ];
+    var page;
 
-    for (i = windowStart; i <= windowEnd; i++) {
-        pages.push(i);
+    for (page = windowStart; page <= windowEnd; page++) {
+        items.push({symbol: String(page), target: page, disabled: false, current: page === view.page});
     }
 
-    var item = function(label, target, disabled, current) {
-        return '<li class="' + (current ? 'aipdf-page-current' : '') + '">' +
-            '<button type="button" class="aipdf-page-link" data-aipdf-page="' + target + '"' +
-            (disabled ? ' disabled' : '') + '>' + label + '</button></li>';
-    };
+    items.push({symbol: '\u203A', target: view.page + 1, disabled: last, current: false});
+    items.push({symbol: '\u00BB', target: totalPages || 1, disabled: last, current: false});
 
-    container.innerHTML =
-        '<span>' + esc(fmt('showingrecords', {start: start, end: end, total: view.total})) + '</span>' +
-        '<ul class="aipdf-pagination-list">' +
-        item('&laquo;', 1, first, false) +
-        item('&lsaquo;', view.page - 1, first, false) +
-        pages.map(function(page) {
-            return item(String(page), page, false, page === view.page);
-        }).join('') +
-        item('&rsaquo;', view.page + 1, last, false) +
-        item('&raquo;', totalPages || 1, last, false) +
-        '</ul>';
+    items.forEach(function(item) {
+        item.label = fmt('gotopage', item.target);
+    });
 
-    container.querySelectorAll('[data-aipdf-page]').forEach(function(button) {
-        button.addEventListener('click', function() {
+    // The pager is redrawn on every page change, so the handler belongs to the
+    // container rather than to the buttons inside it.
+    if (!container.dataset.aipdfBound) {
+        container.dataset.aipdfBound = '1';
+        container.addEventListener('click', function(event) {
+            var button = event.target.closest('[data-aipdf-page]');
+            if (!button) {
+                return;
+            }
+
             var target = Number(button.getAttribute('data-aipdf-page'));
-            if (!target || target < 1 || target > totalPages || target === view.page) {
+            if (!target || target < 1 || target > Number(container.dataset.aipdfPages) || target === view.page) {
                 return;
             }
             onChange(target);
         });
+    }
+    container.dataset.aipdfPages = totalPages;
+
+    return Templates.render('local_freeaipdfaccessibilityremediation/pagination', {
+        showing: fmt('showingrecords', {start: start, end: end, total: view.total}),
+        items: items
+    }).then(function(html) {
+        Templates.replaceNodeContents(container, html, '');
+        return null;
+    }).catch(function() {
+        return null;
     });
 };
 
 /**
- * Builds the status chip for a scanned document.
+ * Describes a scanned document's status for the row template.
  *
  * @param {Object} doc The document.
  * @returns {String} Chip markup.
  */
-var statusChip = function(doc) {
+var statusOf = function(doc) {
     switch (doc.status) {
         case 'scanning':
-            return '<span class="aipdf-chip aipdf-chip-scanning">' + esc(str('statusscanning')) + '</span>';
+            return {tone: 'scanning', label: str('statusscanning'), action: false};
         case 'pending_scan':
-            return '<button type="button" class="aipdf-chip aipdf-chip-pending aipdf-chip-button" ' +
-                'data-aipdf-scan="' + esc(doc.id) + '">' + esc(str('statuspendingscan')) + '</button>';
+            // The one status an administrator can act on from the table, so it
+            // is the one rendered as a button.
+            return {tone: 'pending', label: str('statuspendingscan'), action: true};
         case 'ready':
-            return '<span class="aipdf-chip aipdf-chip-ready">' + esc(str('statuspending')) + '</span>';
+            return {tone: 'ready', label: str('statuspending'), action: false};
         case 'processing':
-            return '<span class="aipdf-chip aipdf-chip-processing">' + esc(str('statusremediating')) + '</span>';
+            return {tone: 'processing', label: str('statusremediating'), action: false};
         case 'remediated':
-            return '<span class="aipdf-chip aipdf-chip-remediated">' + esc(str('statusremediated')) + '</span>';
+            return {tone: 'remediated', label: str('statusremediated'), action: false};
         default:
-            return '<span class="aipdf-chip aipdf-chip-error">' + esc(str('statuserror')) + '</span>';
+            return {tone: 'error', label: str('statuserror'), action: false};
     }
 };
 
@@ -781,34 +951,36 @@ var renderUpload = function() {
     show(el('aipdf-upload-empty'), false);
     show(el('aipdf-upload-tablewrap'), true);
 
-    el('aipdf-upload-tbody').innerHTML = view.docs.map(function(doc) {
+    renderRows('upload_rows', view.docs.map(function(doc) {
         var scanning = doc.status === 'pending_scan' || doc.status === 'scanning';
-        var pagesCell = scanning
-            ? '<span class="aipdf-chip aipdf-chip-scanning">' + esc(str('scanning')) + '</span>'
-            : (doc.status === 'processing'
-                ? '<span class="aipdf-chip aipdf-chip-processing">' + esc(str('processing')) + '</span>'
-                : esc(doc.pages === null || doc.pages === undefined ? '—' : doc.pages));
+        var statuschip = '';
 
-        return '<tr>' +
-            '<td><input type="checkbox" class="aipdf-checkbox" data-aipdf-select="' + esc(doc.id) + '"' +
-            (state.selected.indexOf(doc.id) !== -1 ? ' checked' : '') +
-            (doc.status !== 'ready' ? ' disabled' : '') +
-            ' aria-label="' + esc(fmt('selectone', doc.name)) + '"></td>' +
-            '<td><span class="aipdf-doc-cell">' +
-            '<span class="aipdf-file-icon' + (doc.source === 'url' ? ' aipdf-file-icon-link' : '') + '">PDF</span>' +
-            '<span>' + esc(doc.name) +
-            (doc.sourceUrl ? '<span class="aipdf-doc-sub">' + esc(doc.sourceUrl) + '</span>' : '') +
-            '</span></span></td>' +
-            '<td class="aipdf-center"><span class="aipdf-chip aipdf-chip-' + esc(doc.source) + '">' +
-            esc(doc.source === 'url' ? str('sourceurl') : str('sourcefile')) + '</span></td>' +
-            '<td class="aipdf-center">' + pagesCell + '</td>' +
-            '<td class="aipdf-center"><span class="aipdf-row-actions">' +
-            (doc.status === 'processing' ? '' :
-                '<button type="button" class="aipdf-link-danger" data-aipdf-remove="' + esc(doc.id) + '"' +
-                (hasSelection || busy ? ' disabled' : '') + '>' + icon('x', 14) +
-                '<span>' + esc(str('remove')) + '</span></button>') +
-            '</span></td></tr>';
-    }).join('');
+        if (scanning) {
+            statuschip = str('scanning');
+        } else if (doc.status === 'processing') {
+            statuschip = str('processing');
+        }
+
+        return {
+            id: doc.id,
+            name: doc.name,
+            selectlabel: fmt('selectone', doc.name),
+            checked: state.selected.indexOf(doc.id) !== -1,
+            disabled: doc.status !== 'ready',
+            islink: doc.source === 'url',
+            source: doc.source,
+            sourcelabel: doc.source === 'url' ? str('sourceurl') : str('sourcefile'),
+            sourceurl: doc.sourceUrl || '',
+            pages: doc.pages === null || doc.pages === undefined ? '—' : doc.pages,
+            // While a document is being scanned or remediated its page count is
+            // not yet known, so the cell says what is happening instead.
+            statuschip: statuschip,
+            statustone: scanning ? 'scanning' : 'processing',
+            canremove: doc.status !== 'processing',
+            removedisabled: hasSelection || busy,
+            removelabel: str('remove')
+        };
+    }), el('aipdf-upload-tbody'));
 
     renderPagination(el('aipdf-upload-pagination'), view, function(page) {
         view.page = page;
@@ -832,9 +1004,13 @@ var renderScan = function() {
 
     if (!view.docs.length) {
         show(el('aipdf-scan-tablewrap'), false);
-        el('aipdf-scan-empty').textContent = !domain
-            ? str('nositedomain')
-            : (view.search || view.status !== 'all' ? str('noscannedmatch') : str('noscanneddocuments'));
+        var emptykey = 'nositedomain';
+
+        if (domain) {
+            emptykey = view.search || view.status !== 'all' ? 'noscannedmatch' : 'noscanneddocuments';
+        }
+
+        el('aipdf-scan-empty').textContent = str(emptykey);
         show(el('aipdf-scan-empty'), true);
         refreshBulk();
         return;
@@ -843,22 +1019,24 @@ var renderScan = function() {
     show(el('aipdf-scan-empty'), false);
     show(el('aipdf-scan-tablewrap'), true);
 
-    el('aipdf-scan-tbody').innerHTML = view.docs.map(function(doc) {
-        return '<tr>' +
-            '<td><input type="checkbox" class="aipdf-checkbox" data-aipdf-select="' + esc(doc.id) + '"' +
-            (state.selected.indexOf(doc.id) !== -1 ? ' checked' : '') +
-            (doc.status !== 'ready' ? ' disabled' : '') +
-            ' aria-label="' + esc(fmt('selectone', doc.name)) + '"></td>' +
-            '<td><span class="aipdf-doc-cell"><span class="aipdf-file-icon">PDF</span>' +
-            '<span>' + esc(doc.name) + '<span class="aipdf-doc-sub">' + esc(str('sourcelabel')) + ' ' +
-            (doc.sourceUrl
-                ? '<a href="' + esc(doc.sourceUrl) + '" target="_blank" rel="noreferrer noopener">' +
-                    esc(doc.sourceUrl) + '</a>'
-                : esc(str('uploadedfile'))) +
-            '</span></span></span></td>' +
-            '<td class="aipdf-center">' + esc(doc.pages || '—') + '</td>' +
-            '<td class="aipdf-center">' + statusChip(doc) + '</td></tr>';
-    }).join('');
+    renderRows('scan_rows', view.docs.map(function(doc) {
+        var status = statusOf(doc);
+
+        return {
+            id: doc.id,
+            name: doc.name,
+            selectlabel: fmt('selectone', doc.name),
+            checked: state.selected.indexOf(doc.id) !== -1,
+            disabled: doc.status !== 'ready',
+            sourcelabel: str('sourcelabel'),
+            sourceurl: doc.sourceUrl || '',
+            uploadedlabel: str('uploadedfile'),
+            pages: doc.pages || '—',
+            statuslabel: status.label,
+            statustone: status.tone,
+            statusaction: status.action
+        };
+    }), el('aipdf-scan-tbody'));
 
     renderPagination(el('aipdf-scan-pagination'), view, function(page) {
         view.page = page;
@@ -884,28 +1062,28 @@ var renderRemediated = function() {
     show(el('aipdf-rem-empty'), false);
     show(el('aipdf-rem-tablewrap'), true);
 
-    el('aipdf-rem-tbody').innerHTML = view.docs.map(function(doc) {
+    renderRows('remediated_rows', view.docs.map(function(doc) {
         var name = doc.remediatedName || doc.name;
-        var label = doc.source === 'web' ? str('sourcewebsite')
-            : (doc.source === 'url' ? str('sourceurlscan') : str('sourceupload'));
+        var sourcekey = 'sourceupload';
 
-        return '<tr>' +
-            '<td><span class="aipdf-doc-cell">' +
-            '<span class="aipdf-file-icon aipdf-file-icon-purple">PDF</span>' + esc(name) + '</span></td>' +
-            '<td class="aipdf-center"><span class="aipdf-chip aipdf-chip-' + esc(doc.source) + '">' +
-            esc(label) + '</span></td>' +
-            '<td class="aipdf-center">' + esc(formatDate(doc.remediatedAt)) + '</td>' +
-            '<td class="aipdf-center">' +
-            esc(doc.remediatedPages === null || doc.remediatedPages === undefined
-                ? doc.pages : doc.remediatedPages) + '</td>' +
-            '<td class="aipdf-right"><span class="aipdf-table-actions">' +
-            '<button type="button" class="aipdf-btn aipdf-btn-soft aipdf-btn-sm" ' +
-            'data-aipdf-suggest="' + esc(doc.id) + '">' + esc(str('aisuggestions')) + '</button>' +
-            '<button type="button" class="aipdf-btn aipdf-btn-outline aipdf-btn-sm" ' +
-            'data-aipdf-download="' + esc(doc.id) + '" data-aipdf-name="' + esc(name) + '">' +
-            icon('download', 16) + '<span>' + esc(str('download')) + '</span></button>' +
-            '</span></td></tr>';
-    }).join('');
+        if (doc.source === 'web') {
+            sourcekey = 'sourcewebsite';
+        } else if (doc.source === 'url') {
+            sourcekey = 'sourceurlscan';
+        }
+
+        return {
+            id: doc.id,
+            name: name,
+            source: doc.source,
+            sourcelabel: str(sourcekey),
+            date: formatDate(doc.remediatedAt),
+            pages: doc.remediatedPages === null || doc.remediatedPages === undefined
+                ? doc.pages : doc.remediatedPages,
+            suggestionslabel: str('aisuggestions'),
+            downloadlabel: str('download')
+        };
+    }), el('aipdf-rem-tbody'));
 
     renderPagination(el('aipdf-rem-pagination'), view, function(page) {
         view.page = page;
@@ -930,6 +1108,7 @@ var loadUpload = function() {
             view.docs = result.documents || [];
             view.total = result.total || 0;
             renderUpload();
+            return null;
         }).catch(function(error) {
             view.docs = [];
             view.total = 0;
@@ -937,6 +1116,7 @@ var loadUpload = function() {
             reportError(error, 'startfailed');
         }).then(function() {
             loading(false);
+            return null;
         });
 };
 
@@ -968,6 +1148,7 @@ var loadScan = function() {
         view.docs = result.documents || [];
         view.total = result.total || 0;
         renderScan();
+        return null;
     }).catch(function(error) {
         view.docs = [];
         view.total = 0;
@@ -975,6 +1156,7 @@ var loadScan = function() {
         reportError(error, 'startfailed');
     }).then(function() {
         loading(false);
+        return null;
     });
 };
 
@@ -996,6 +1178,7 @@ var loadRemediated = function() {
         view.docs = result.documents || [];
         view.total = result.total || 0;
         renderRemediated();
+        return null;
     }).catch(function(error) {
         view.docs = [];
         view.total = 0;
@@ -1003,6 +1186,7 @@ var loadRemediated = function() {
         reportError(error, 'startfailed');
     }).then(function() {
         loading(false);
+        return null;
     });
 };
 
@@ -1037,9 +1221,7 @@ var switchTab = function(tab) {
         show(el('aipdf-panel-' + name), name === tab);
     });
 
-    el('aipdf-subtitle').textContent = str(
-        tab === 'upload' ? 'subtitleupload' : (tab === 'scan' ? 'subtitlescan' : 'subtitleremediated')
-    );
+    el('aipdf-subtitle').textContent = str(SUBTITLES[tab] || SUBTITLES.upload);
 
     reloadDocuments();
     refreshCurrent();
@@ -1091,11 +1273,15 @@ var handleFiles = function(files) {
         if (ok) {
             toast(fmt('uploadsuccess', ok), 'success');
         }
+        return null;
     }).then(function() {
         el('aipdf-dropzone-label').textContent = str('draganddrop');
         loading(false);
         reloadDocuments();
         loadUpload();
+        return null;
+    }).catch(function() {
+        return null;
     });
 };
 
@@ -1126,9 +1312,7 @@ var crawlSite = function() {
             }
             toast(fmt('crawlfound', {found: result.found, added: result.added, domain: domain}), 'success');
             return Promise.all((result.documents || []).map(function(doc) {
-                return request('/documents/' + doc.id + '/scan', {method: 'POST'}).catch(function() {
-                    return null;
-                });
+                return scanDocument(doc.id);
             }));
         }).catch(function(error) {
             reportError(error, 'crawlerror');
@@ -1138,6 +1322,9 @@ var crawlSite = function() {
             button.textContent = fmt('findpdfs', domain);
             reloadDocuments();
             loadScan();
+            return null;
+        }).catch(function() {
+            return null;
         });
 };
 
@@ -1160,6 +1347,9 @@ var removeDocuments = function(ids) {
         loading(false);
         reloadDocuments();
         refreshCurrent();
+        return null;
+    }).catch(function() {
+        return null;
     });
 };
 
@@ -1188,10 +1378,14 @@ var downloadRemediated = function(id, name, button) {
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
+        return null;
     }).catch(function() {
         toast(str('downloadfailed'), 'error');
     }).then(function() {
         button.disabled = false;
+        return null;
+    }).catch(function() {
+        return null;
     });
 };
 
@@ -1220,7 +1414,6 @@ var renderProgress = function() {
  */
 var followJob = function(job) {
     state.job = job;
-    setActiveJob(job && job.status === 'processing' ? job.id : null);
     renderProgress();
     refreshBulk();
     refreshCurrent();
@@ -1240,7 +1433,6 @@ var followJob = function(job) {
 
             if (data.job && data.job.status === 'completed') {
                 window.clearInterval(state.jobTimer);
-                setActiveJob(null);
                 toast(str('remediationcomplete'), 'success');
                 reloadDocuments();
                 switchTab('remediated');
@@ -1251,41 +1443,15 @@ var followJob = function(job) {
                     refreshCurrent();
                 }, 1200);
             }
+            return null;
         }).catch(function() {
             window.clearInterval(state.jobTimer);
-            setActiveJob(null);
             state.job = null;
             renderProgress();
             refreshBulk();
             refreshCurrent();
         });
     }, 1000);
-};
-
-/**
- * Picks a run back up when one was left going, and forgets it when it is over.
- *
- * @returns {Promise} Resolves once the job has been checked.
- */
-var resumeJob = function() {
-    var id = activeJob();
-
-    if (!id) {
-        return Promise.resolve();
-    }
-
-    return request('/remediation/jobs/' + id).then(function(data) {
-        if (data.job && data.job.status === 'processing') {
-            state.user = data.user || state.user;
-            followJob(data.job);
-            return;
-        }
-
-        // Finished, or gone, while the page was closed.
-        setActiveJob(null);
-    }).catch(function() {
-        setActiveJob(null);
-    });
 };
 
 /**
@@ -1320,6 +1486,7 @@ var startRemediation = function(allowPartial) {
         state.user = result.user || state.user;
         renderPlanBar();
         followJob(result.job);
+        return null;
     }).catch(function(error) {
         // The service reports both of these when a run cannot proceed as
         // asked. Each opens the coverage dialog, which carries the upgrade
@@ -1335,6 +1502,9 @@ var startRemediation = function(allowPartial) {
         }
     }).then(function() {
         loading(false);
+        return null;
+    }).catch(function() {
+        return null;
     });
 };
 
@@ -1361,294 +1531,6 @@ var openConfirm = function(message, onConfirm) {
 var closeConfirm = function() {
     state.confirmAction = null;
     show(el('aipdf-confirm'), false);
-};
-
-/**
- * Opens the AI suggestions dialog for a document.
- *
- * @param {String} id Document identifier.
- */
-var openSuggestions = function(id) {
-    var dialog = el('aipdf-suggestions');
-    var subtitle = dialog.querySelector('[data-aipdf-role="subtitle"]');
-    var body = dialog.querySelector('[data-aipdf-role="body"]');
-
-    subtitle.textContent = '';
-    body.innerHTML = '<p class="aipdf-empty">' + esc(str('analysing')) + '</p>';
-    show(dialog, true);
-
-    request('/documents/' + id + '/suggestions').then(function(data) {
-        var items = (data.items || []).slice().sort(function(a, b) {
-            if (a.status === b.status) {
-                return 0;
-            }
-            return a.status === 'failed' ? -1 : 1;
-        });
-
-        subtitle.textContent = data.documentName + ' · ' + data.pages + ' ' + str('pages').toLowerCase();
-
-        body.innerHTML =
-            '<div class="aipdf-sug-summary">' +
-            '<span class="aipdf-chip aipdf-chip-passed">' + esc(fmt('checkspassed', data.passed)) + '</span>' +
-            (data.failed > 0
-                ? '<span class="aipdf-chip aipdf-chip-pending">' + esc(fmt('checkstofix', data.failed)) + '</span>'
-                : '<span class="aipdf-chip aipdf-chip-passed">' + esc(str('allcheckspassed')) + '</span>') +
-            '</div><div class="aipdf-sug-list">' +
-            items.map(function(item, index) {
-                return '<div class="aipdf-sug-item' +
-                    (item.status === 'failed' ? ' aipdf-sug-item-failed' : '') + '">' +
-                    '<button type="button" class="aipdf-sug-row" data-aipdf-toggle="' + index + '" ' +
-                    'aria-expanded="false">' +
-                    '<span class="aipdf-sug-dot aipdf-sug-dot-' + esc(item.status) + '">' +
-                    (item.status === 'passed' ? icon('check', 12) : icon('warning', 13)) + '</span>' +
-                    '<span class="aipdf-sug-title">' + esc(item.title) + '</span>' +
-                    '<span class="aipdf-sug-detail">' + esc(item.detail) + '</span>' +
-                    (item.willAutoFix
-                        ? '<span class="aipdf-chip aipdf-chip-file">' + esc(str('fixedbyai')) + '</span>'
-                        : '') +
-                    '<span class="aipdf-sug-caret">&#9656;</span></button>' +
-                    '<div class="aipdf-sug-body" hidden>' +
-                    '<p><strong>' + esc(str('whatthismeans')) + '</strong><br>' + esc(item.plain) + '</p>' +
-                    '<p><strong>' + esc(str('whyitmatters')) + '</strong><br>' + esc(item.why) + '</p>' +
-                    '<p><strong>' +
-                    esc(item.status === 'passed' ? str('howitwasfixed') : str('howitgetsfixed')) +
-                    '</strong><br>' + esc(item.fix) + '</p>' +
-                    '<div class="aipdf-sug-example">' +
-                    '<div class="aipdf-sug-example-col aipdf-sug-example-before">' +
-                    '<div class="aipdf-sug-example-label">' + esc(str('before')) + '</div>' +
-                    '<pre>' + esc(item.example && item.example.before) + '</pre></div>' +
-                    '<div class="aipdf-sug-example-col aipdf-sug-example-after">' +
-                    '<div class="aipdf-sug-example-label">' + esc(str('after')) + '</div>' +
-                    '<pre>' + esc(item.example && item.example.after) + '</pre></div>' +
-                    '</div></div></div>';
-            }).join('') + '</div>';
-
-        body.querySelectorAll('[data-aipdf-toggle]').forEach(function(button) {
-            button.addEventListener('click', function() {
-                var panel = button.nextElementSibling;
-                var opening = panel.hidden;
-                panel.hidden = !opening;
-                button.setAttribute('aria-expanded', opening ? 'true' : 'false');
-                button.querySelector('.aipdf-sug-caret').innerHTML = opening ? '&#9662;' : '&#9656;';
-            });
-        });
-    }).catch(function(error) {
-        body.innerHTML = '<p class="aipdf-empty">' +
-            esc((error && error.message) || str('startfailed')) + '</p>';
-    });
-};
-
-/* ------------------------------------------------------------------------ *
- * The account
- * ------------------------------------------------------------------------ */
-
-/**
- * Reduces a domain or URL to the bare host the service expects.
- *
- * Mirrors config::normalise_domain() on the server, so what the field shows
- * after a correction is what was actually stored.
- *
- * @param {String} value Domain or URL.
- * @returns {String} Bare hostname, lowercased.
- */
-var normaliseDomain = function(value) {
-    var domain = (typeof value === 'string' ? value : '').trim();
-
-    if (!domain) {
-        return '';
-    }
-
-    if (domain.indexOf('//') !== -1) {
-        domain = domain.split('//').pop();
-    }
-
-    return domain
-        .split('/')[0]
-        .split('?')[0]
-        .replace(/:\d+$/, '')
-        .replace(/^\.+|\.+$/g, '')
-        .toLowerCase();
-};
-
-/**
- * Returns what the account fields currently hold.
- *
- * @returns {Object} Keys "name", "email" and "domain".
- */
-var readAccountForm = function() {
-    return {
-        name: el('aipdf-account-name').value,
-        email: el('aipdf-account-email').value,
-        domain: el('aipdf-account-domain').value
-    };
-};
-
-/**
- * Checks the account fields, so an obvious typo is caught before the round trip.
- *
- * An empty field is not an error: it means "use what the site says", and the
- * placeholder shows what that is. Only a value that could not work is refused.
- *
- * @param {Object} values Keys "name", "email" and "domain".
- * @returns {Object} Message keyed by field, for each field that is wrong.
- */
-var validateAccount = function(values) {
-    var errors = {};
-    var email = (values.email || '').trim();
-    var domain = normaliseDomain(values.domain);
-
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        errors.email = str('erroraccountemail');
-    }
-
-    if (domain && domain.indexOf('.') === -1) {
-        errors.domain = str('erroraccountdomain');
-    }
-
-    return errors;
-};
-
-/**
- * Shows or clears the message beneath each account field.
- *
- * The hint and the error occupy the same place, so the dialog does not jump
- * as messages come and go.
- *
- * @param {Object} errors Message keyed by field, as validateAccount returns.
- */
-var setAccountErrors = function(errors) {
-    ['name', 'email', 'domain'].forEach(function(field) {
-        var id = 'aipdf-account-' + field;
-        var error = el(id + '-error');
-        var hint = el(id + '-hint');
-        var input = el(id);
-
-        if (errors[field]) {
-            error.textContent = errors[field];
-            input.setAttribute('aria-invalid', 'true');
-            input.setAttribute('aria-describedby', id + '-error');
-        } else {
-            input.removeAttribute('aria-invalid');
-            input.setAttribute('aria-describedby', id + '-hint');
-        }
-
-        show(error, Boolean(errors[field]));
-        show(hint, !errors[field]);
-    });
-};
-
-/**
- * Shows, or hides, the reason a submission was refused.
- *
- * @param {String|null} message The service's own wording, or null to clear it.
- */
-var showAccountFailure = function(message) {
-    var dialog = el('aipdf-account');
-    var callout = dialog.querySelector('[data-aipdf-role="failure"]');
-
-    if (message) {
-        callout.querySelector('[data-aipdf-role="failure-text"]').textContent = message;
-    }
-
-    show(callout, Boolean(message));
-};
-
-/**
- * Locks or unlocks the account dialog while it is being submitted.
- *
- * @param {Boolean} busy Whether a submission is in flight.
- */
-var setAccountBusy = function(busy) {
-    var dialog = el('aipdf-account');
-    var label = dialog.querySelector('[data-aipdf-role="account-save-label"]');
-
-    label.textContent = str(busy ? 'accountsaving' : 'accountsave');
-    dialog.querySelector('[data-aipdf-action="account-save"]').disabled = busy;
-    dialog.querySelector('[data-aipdf-action="account-cancel"]').disabled = busy;
-    dialog.querySelector('[data-aipdf-action="close"]').disabled = busy;
-
-    ['name', 'email', 'domain'].forEach(function(field) {
-        el('aipdf-account-' + field).disabled = busy;
-    });
-};
-
-/**
- * Opens the account dialog, filled in with what is in force.
- */
-var openAccountDialog = function() {
-    var values = state.accountDraft || state.account || {};
-    var defaults = CFG.accountDefaults || {};
-
-    ['name', 'email', 'domain'].forEach(function(field) {
-        var input = el('aipdf-account-' + field);
-        input.value = values[field] || '';
-        // What the site itself suggests, so a correction can be undone by
-        // emptying the field rather than by remembering what was there.
-        input.placeholder = defaults[field] || '';
-    });
-
-    setAccountErrors({});
-    showAccountFailure(null);
-    setAccountBusy(false);
-    show(el('aipdf-account'), true);
-    el('aipdf-account-name').focus();
-};
-
-/**
- * Closes the account dialog, keeping whatever was typed for the next opening.
- */
-var closeAccountDialog = function() {
-    state.accountDraft = readAccountForm();
-    show(el('aipdf-account'), false);
-};
-
-/**
- * Saves the account, signs in again as it, and reloads what the page shows.
- *
- * The cached token belongs to the previous account, so it is dropped first:
- * keeping it would leave the workspace showing the old account's documents
- * under the new account's name.
- *
- * @returns {Promise} Resolves once the workspace has been reloaded.
- */
-var saveAccount = function() {
-    var values = readAccountForm();
-    var errors = validateAccount(values);
-
-    setAccountErrors(errors);
-    showAccountFailure(null);
-
-    if (Object.keys(errors).length) {
-        return Promise.resolve();
-    }
-
-    setAccountBusy(true);
-    setToken(null);
-    setActiveJob(null);
-
-    return signIn(values).then(function(result) {
-        state.account = result.account || state.account;
-        state.accountDraft = null;
-        CFG.website = state.account ? state.account.domain : CFG.website;
-        show(el('aipdf-account'), false);
-        renderAccountBar();
-
-        return request('/auth/me').catch(function() {
-            return {};
-        });
-    }).then(function(data) {
-        state.user = data.user || null;
-        renderPlanBar();
-        state.selected = [];
-        return reloadDocuments();
-    }).then(function() {
-        refreshCurrent();
-        refreshBulk();
-    }).catch(function(error) {
-        showAccountFailure(error && error.message ? error.message : str('startfailed'));
-    }).then(function() {
-        setAccountBusy(false);
-    });
 };
 
 /**
@@ -1887,6 +1769,9 @@ var bind = function() {
                 loading(false);
                 reloadDocuments();
                 loadScan();
+                return null;
+            }).catch(function() {
+                return null;
             });
     });
     el('aipdf-scan-start').addEventListener('click', function() {
@@ -1910,11 +1795,6 @@ var bind = function() {
         loadRemediated();
     });
     el('aipdf-rem-tbody').addEventListener('click', function(event) {
-        var suggest = event.target.closest('[data-aipdf-suggest]');
-        if (suggest) {
-            openSuggestions(suggest.getAttribute('data-aipdf-suggest'));
-            return;
-        }
         var download = event.target.closest('[data-aipdf-download]');
         if (download) {
             downloadRemediated(
@@ -1936,39 +1816,6 @@ var bind = function() {
         } else if (event.target.closest('[data-aipdf-action="cancel"]') || event.target === el('aipdf-confirm')) {
             closeConfirm();
         }
-    });
-
-    el('aipdf-suggestions').addEventListener('click', function(event) {
-        if (event.target === el('aipdf-suggestions') || event.target.closest('[data-aipdf-action="close"]')) {
-            show(el('aipdf-suggestions'), false);
-        }
-    });
-
-    var account = el('aipdf-account');
-    el('aipdf-account-bar').addEventListener('click', function(event) {
-        if (event.target.closest('[data-aipdf-action="account-change"]')) {
-            state.accountDraft = null;
-            openAccountDialog();
-        }
-    });
-    account.addEventListener('click', function(event) {
-        if (el('aipdf-account-name').disabled) {
-            return;
-        }
-        if (event.target === account ||
-                event.target.closest('[data-aipdf-action="close"]') ||
-                event.target.closest('[data-aipdf-action="account-cancel"]')) {
-            closeAccountDialog();
-        }
-    });
-    ['name', 'email', 'domain'].forEach(function(field) {
-        el('aipdf-account-' + field).addEventListener('input', function() {
-            showAccountFailure(null);
-        });
-    });
-    el('aipdf-account-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        saveAccount();
     });
 
     var coverage = el('aipdf-coverage');
@@ -2001,12 +1848,8 @@ var bind = function() {
             return;
         }
         closeConfirm();
-        show(el('aipdf-suggestions'), false);
         closeCoverage();
 
-        if (!el('aipdf-account-name').disabled) {
-            closeAccountDialog();
-        }
     });
 };
 
@@ -2062,29 +1905,48 @@ export const init = (config) => {
 
     CFG = config;
     state.account = CFG.account || null;
+
+    trace('page opened', {
+        account: CFG.account,
+        website: CFG.website,
+        apiBaseUrl: CFG.apiBaseUrl
+    });
     renderStatic();
     renderAccountBar();
     bind();
 
     loading(true);
-    ensureSession().then(function(ok) {
-        if (!ok) {
-            toast(str('unauthenticated'), 'error');
-        }
-        return request('/auth/me').catch(function() {
-            return {};
-        });
+
+    // Registration first, on its own. Nothing that needs the token is asked
+    // for until one is in hand, so a site that cannot register says so once,
+    // rather than producing a row of unauthorised requests that report only
+    // that a token was missing.
+    ensureSession().then(function() {
+        return request('/auth/me');
     }).then(function(data) {
         state.user = data.user || null;
         renderPlanBar();
-        return request('/billing/plans').catch(function() {
-            return {};
-        });
+        return request('/billing/plans');
     }).then(function(data) {
         state.plans = data.plans || [];
-        return resumeJob();
-    }).then(function() {
         loading(false);
         switchTab('upload');
+        ready();
+        return null;
+    }).catch(function(error) {
+        var reason = (error && error.message) || str('unauthenticated');
+
+        state.signinfailure = reason;
+        showConnectionError(reason);
+        toast(reason, 'error');
+        loading(false);
+
+        // Revealed even though nothing loaded: the notice explaining why is
+        // inside the workspace, and a page that sits on a spinner for ever
+        // says less than one that says what went wrong.
+        ready();
+        trace('workspace could not start', {reason: reason});
+
+        return null;
     });
 };

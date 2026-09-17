@@ -17,53 +17,31 @@
 /**
  * Strings for the AI PDF Accessibility Remediation plugin.
  *
- * @package     local_aipdfaccessibilityremediation
+ * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['accountchange'] = 'Change';
-$string['accountdomain'] = 'Website domain';
-$string['accountdomainhint'] = 'The site these PDFs belong to. Change it if this is not it.';
-$string['accountemail'] = 'Email address';
-$string['accountemailhint'] = 'Identifies the account and its plan.';
-$string['accountfailed'] = 'That did not work';
-$string['accountintro'] = 'Remediation runs under an account for this site. These come from your ' .
-    'site settings — correct any that are wrong.';
-$string['accountname'] = 'Name';
-$string['accountnamehint'] = 'Your name, or your organisation\'s.';
-$string['accountsave'] = 'Save and continue';
-$string['accountsaving'] = 'Setting up...';
-$string['accounttitle'] = 'Account details';
 $string['action'] = 'Action';
 $string['addedfrom'] = 'Added from';
 $string['addselected'] = 'Add selected for remediation';
-$string['after'] = 'After';
-$string['aipdfaccessibilityremediation:manage'] = 'Manage AI PDF accessibility remediation';
-$string['aisuggestions'] = 'AI Suggestions';
-$string['allcheckspassed'] = 'All checks passed';
 $string['allsources'] = 'All sources';
 $string['allstatus'] = 'All status';
-$string['analysing'] = 'Analysing document...';
-$string['before'] = 'Before';
 $string['cancel'] = 'Cancel';
-$string['checkspassed'] = '{$a} passed';
-$string['checkstofix'] = '{$a} to fix';
 $string['close'] = 'Close';
 $string['confirmremoveall'] = 'Are you sure you want to remove the selected documents?';
 $string['confirmremoveone'] = 'Are you sure you want to remove {$a}?';
+$string['connectionfailed'] = 'This site is not connected to the remediation service';
+$string['connectionhelp'] = 'Until it connects, documents cannot be uploaded, scanned or remediated.';
 $string['continuewithplan'] = 'Continue with my current plan ({$a} pages)';
 $string['continuewithtrial'] = 'Continue with my free plan ({$a} pages)';
-$string['coveragebody'] = 'Your PDFs contain {$a->total} pages. Upgrade to process all pages, or continue ' .
-    'with the {$a->covered} pages included in your current plan.';
+$string['coveragebody'] = 'Your PDFs contain {$a->total} pages. Upgrade to process all pages, or continue with the {$a->covered} pages included in your current plan.';
 $string['coveragecurrent'] = 'Your current plan covers {$a->covered} of {$a->total} pages';
 $string['coverageexhausted'] = 'You have used all the pages in your plan';
-$string['coverageexhaustedpages'] = 'The documents you selected contain {$a} pages, and your ' .
-    'current plan has no pages left. Upgrade to carry on remediating.';
-$string['coverageexhaustedpagestrial'] = 'The documents you selected contain {$a} pages, and your ' .
-    'free trial has no pages left. Upgrade to carry on remediating.';
+$string['coverageexhaustedpages'] = 'The documents you selected contain {$a} pages, and your current plan has no pages left. Upgrade to carry on remediating.';
+$string['coverageexhaustedpagestrial'] = 'The documents you selected contain {$a} pages, and your free trial has no pages left. Upgrade to carry on remediating.';
 $string['coverageexhaustedtrial'] = 'Your free trial has used all its pages';
 $string['coveragetrial'] = 'Free trial covers the first {$a} pages';
 $string['crawlerror'] = 'Could not crawl the website.';
@@ -75,8 +53,6 @@ $string['documents'] = 'Documents';
 $string['download'] = 'Download';
 $string['downloadfailed'] = 'Could not download this file.';
 $string['draganddrop'] = 'Drag and drop file here';
-$string['erroraccountdomain'] = 'Enter a full domain, such as example.com.';
-$string['erroraccountemail'] = 'That does not look like an email address.';
 $string['errorbadresponse'] = 'The remediation service returned an unexpected response (HTTP {$a}).';
 $string['errorconnection'] = 'Could not reach the remediation service: {$a}';
 $string['errornoemail'] = 'No contact address could be derived for this site. Set a support email under Site administration.';
@@ -85,9 +61,8 @@ $string['filename'] = 'File name';
 $string['filenamesource'] = 'File name / source';
 $string['filetoolarge'] = 'File is too large. Up to 50 MB is allowed.';
 $string['findpdfs'] = 'Find PDFs on {$a}';
-$string['fixedbyai'] = 'Fixed by AI remediation';
-$string['howitgetsfixed'] = 'How it gets fixed';
-$string['howitwasfixed'] = 'How it was fixed';
+$string['freeaipdfaccessibilityremediation:manage'] = 'Manage AI PDF accessibility remediation';
+$string['gotopage'] = 'Go to page {$a}';
 $string['inprogress'] = 'AI remediation in progress...';
 $string['itemsperpage'] = 'Items per page';
 $string['loading'] = 'Loading...';
@@ -99,22 +74,16 @@ $string['noscanneddocuments'] = 'No scanned documents yet - use the button above
 $string['noscannedmatch'] = 'No documents match your search or filter.';
 $string['nositedomain'] = 'This site has no domain to scan.';
 $string['pages'] = 'Pages';
-$string['pagesleft'] = '{$a->remaining} of {$a->total} pages left';
+$string['pagesleft'] = '{$a} pages remaining';
 $string['pdfformatonly'] = 'PDF format only';
 $string['pdfonly'] = 'PDF format only - please choose a .pdf file.';
 $string['pluginname'] = 'AI PDF Accessibility Remediation';
-$string['privacy:metadata:aipdfaccessibilityremediation'] = 'Documents and site contact details are sent to the ' .
-    'AI PDF Accessibility Remediation service so that they can be checked and repaired.';
-$string['privacy:metadata:aipdfaccessibilityremediation:company_name'] = 'The full name of the site, recorded on ' .
-    'the remediation account.';
-$string['privacy:metadata:aipdfaccessibilityremediation:documents'] = 'The PDF documents an administrator uploads ' .
-    'or selects for remediation.';
-$string['privacy:metadata:aipdfaccessibilityremediation:email'] = 'The site support email address, used to ' .
-    'identify the remediation account.';
-$string['privacy:metadata:aipdfaccessibilityremediation:name'] = 'The site support contact name, recorded on ' .
-    'the remediation account.';
-$string['privacy:metadata:aipdfaccessibilityremediation:website'] = 'The address of this site, used to register ' .
-    'it with the service.';
+$string['privacy:metadata:freeaipdfaccessibilityremediation'] = 'Documents and site contact details are sent to the AI PDF Accessibility Remediation service so that they can be checked and repaired.';
+$string['privacy:metadata:freeaipdfaccessibilityremediation:company_name'] = 'The full name of the site, recorded on the remediation account.';
+$string['privacy:metadata:freeaipdfaccessibilityremediation:documents'] = 'The PDF documents an administrator uploads or selects for remediation.';
+$string['privacy:metadata:freeaipdfaccessibilityremediation:email'] = 'The site support email address, used to identify the remediation account.';
+$string['privacy:metadata:freeaipdfaccessibilityremediation:name'] = 'The site support contact name, recorded on the remediation account.';
+$string['privacy:metadata:freeaipdfaccessibilityremediation:website'] = 'The address of this site, used to register it with the service.';
 $string['processing'] = 'Processing';
 $string['recommendedplan'] = 'Recommended plan';
 $string['recommendedplanis'] = 'Recommended: {$a->name} - {$a->pages} pages, {$a->price}';
@@ -165,5 +134,3 @@ $string['uploadfailed'] = 'Upload failed.';
 $string['uploading'] = 'Uploading...';
 $string['uploadsuccess'] = '{$a} file(s) uploaded.';
 $string['uptofiftymb'] = 'Up to 50 MB';
-$string['whatthismeans'] = 'What this means';
-$string['whyitmatters'] = 'Why it matters';

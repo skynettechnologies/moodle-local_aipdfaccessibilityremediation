@@ -14,91 +14,48 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace local_aipdfaccessibilityremediation;
+namespace local_freeaipdfaccessibilityremediation;
 
 /**
  * Fixed connection settings and the values sent when provisioning an account.
  *
- * The service address and the provisioning key are pinned here. The account the
- * site registers under is derived from the site itself, so an installation is
- * ready to use immediately and an administrator is never asked to supply
- * anything before they can start.
+ * The service address and the provisioning key are pinned here. The account is
+ * derived: the administrator using the workspace supplies the name and address,
+ * and the site supplies the domain, so an installation is ready to use
+ * immediately and nobody is asked to fill anything in before they can start.
  *
- * Those derived values are defaults, not facts. A site's support address can
- * belong to several properties, and the host Moodle is served from is not
- * always the site whose PDFs are being remediated, so each of the three can be
- * corrected from the workspace. A correction is stored with set_config, which
- * makes it the whole site's, not one administrator's browser's.
+ * Nothing here is configurable. The values follow the site and the person
+ * using it, which is what keeps the plugin drop-in; where they are wrong, they
+ * are wrong in Moodle's own settings and are corrected there.
  *
- * @package     local_aipdfaccessibilityremediation
+ * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class config {
     /** @var string Origin of the AI PDF Remediation backend, without a trailing slash. */
-    const API_BASE_URL = 'https://livepdfapi.skynettechnologies.us';
+    public const API_BASE_URL = 'https://livepdfapi.skynettechnologies.us';
 
     /** @var string Accessibility dashboard the upgrade link points at. */
-    const DASHBOARD_URL = 'https://ada.skynettechnologies.us';
+    public const DASHBOARD_URL = 'https://ada.skynettechnologies.us';
 
     /** @var string Key for the provisioning endpoint, sent as X-Api-Key. */
-    const PROVISION_API_KEY = 'PDF-REMEDATION-PLAN-CHECK';
+    public const PROVISION_API_KEY = 'PDF-REMEDATION-PLAN-CHECK';
 
     /** @var string Plan the account is provisioned on. */
-    const PLAN_ID = 'free';
+    public const PLAN_ID = 'free';
 
     /** @var string Country recorded on the account. Moodle stores none. */
-    const COUNTRY = 'US';
+    public const COUNTRY = 'US';
 
     /** @var int Seconds to wait for the complete response. */
-    const TIMEOUT = 30;
+    public const TIMEOUT = 30;
 
     /** @var int Seconds to wait while establishing the connection. */
-    const CONNECT_TIMEOUT = 10;
-
-    /** @var string Plugin name the account override is stored under. */
-    const COMPONENT = 'local_aipdfaccessibilityremediation';
+    public const CONNECT_TIMEOUT = 10;
 
     /**
-     * Returns an account field an administrator has corrected, if any.
-     *
-     * @param string $field One of "name", "email" or "domain".
-     * @return string The stored value, or an empty string.
-     */
-    protected static function override(string $field): string {
-        $value = get_config(self::COMPONENT, 'account' . $field);
-
-        return is_string($value) ? trim($value) : '';
-    }
-
-    /**
-     * Reduces a URL or host to the bare hostname the service expects.
-     *
-     * Accepts whatever an administrator types: "example.com",
-     * "https://example.com/docs", or a host with a port.
-     *
-     * @param string $value Domain or URL.
-     * @return string Bare hostname, lowercased, or an empty string.
-     */
-    public static function normalise_domain(string $value): string {
-        $value = trim($value);
-        if ($value === '') {
-            return '';
-        }
-
-        if (strpos($value, '//') !== false) {
-            $value = (string) parse_url($value, PHP_URL_HOST);
-        } else {
-            $value = explode('/', $value)[0];
-            $value = explode('?', $value)[0];
-            $value = preg_replace('/:\d+$/', '', $value);
-        }
-
-        return strtolower(trim($value, ". \t\n\r\0\x0B"));
-    }
-
-    /**
-     * Returns the host this site is served from, for example "example.com".
+     * Returns the host this site is served from.
      *
      * Derived from $CFG->wwwroot rather than the incoming request, so a site
      * reached through several hostnames still reports one identity.
@@ -106,20 +63,6 @@ class config {
      * @return string Bare hostname, lowercased, or an empty string.
      */
     public static function website(): string {
-        $stored = self::override('domain');
-
-        return $stored !== '' ? self::normalise_domain($stored) : self::derived_website();
-    }
-
-    /**
-     * Returns the host this site is served from, ignoring any correction.
-     *
-     * Derived from $CFG->wwwroot rather than the incoming request, so a site
-     * reached through several hostnames still reports one identity.
-     *
-     * @return string Bare hostname, lowercased, or an empty string.
-     */
-    public static function derived_website(): string {
         global $CFG;
 
         $host = parse_url($CFG->wwwroot, PHP_URL_HOST);
@@ -128,38 +71,56 @@ class config {
     }
 
     /**
+     * Returns the signed-in administrator, when there is a real one.
+     *
+     * Not during an upgrade, a scheduled task or a CLI run, where there is no
+     * person behind the request and $USER is a placeholder.
+     *
+     * @return \stdClass|null The user record, or null.
+     */
+    protected static function current_admin(): ?\stdClass {
+        global $USER;
+
+        if (!isloggedin() || isguestuser()) {
+            return null;
+        }
+
+        return empty($USER->id) ? null : $USER;
+    }
+
+    /**
      * Returns the address the account is provisioned under.
      *
-     * The site support contact is preferred, because it identifies the site
-     * rather than whoever happens to be signed in, which keeps one document
-     * library per Moodle site instead of one per administrator.
+     * The administrator using the workspace comes first: it is their address
+     * the remediation account belongs to, and the one they expect to see. The
+     * site support contact stands behind it for the times there is nobody
+     * signed in, and a noreply address on this host behind that.
      *
-     * Hosts that are not valid email domains, such as "localhost", an intranet
-     * name or a bare IP address, would be rejected by the service, so the
-     * fallback address gains a ".local" suffix. Only the address changes; the
-     * website reported to the service is always the real host.
+     * Hosts that are not valid email domains — "localhost", an intranet name,
+     * a bare IP — would be rejected by the service, so the fallback address
+     * gains a ".local" suffix. Only the address changes; the website reported
+     * to the service is always the real host.
+     *
+     * NOTE: this makes the account personal rather than site wide. Two
+     * administrators are two accounts, and the service allows one account per
+     * domain, so the second is refused with "this domain is already
+     * associated with a different account".
      *
      * @return string Email address, or an empty string when none can be built.
      */
     public static function account_email(): string {
-        $stored = self::override('email');
-
-        return $stored !== '' ? strtolower($stored) : self::derived_email();
-    }
-
-    /**
-     * Returns the address the site suggests, ignoring any correction.
-     *
-     * @return string Email address, or an empty string when none can be built.
-     */
-    public static function derived_email(): string {
         global $CFG;
+
+        $admin = self::current_admin();
+        if ($admin !== null && !empty($admin->email) && validate_email($admin->email)) {
+            return strtolower($admin->email);
+        }
 
         if (!empty($CFG->supportemail) && validate_email($CFG->supportemail)) {
             return $CFG->supportemail;
         }
 
-        $host = self::derived_website();
+        $host = self::website();
         if ($host === '') {
             return '';
         }
@@ -176,19 +137,25 @@ class config {
      *
      * @return string Site support name, its full name, or the host.
      */
-    public static function account_name(): string {
-        $stored = self::override('name');
-
-        return $stored !== '' ? $stored : self::derived_name();
-    }
-
     /**
-     * Returns the contact name the site suggests, ignoring any correction.
+     * Returns the contact name recorded on the account.
      *
-     * @return string Site support name, its full name, or the host.
+     * Follows the address: where the account belongs to the administrator
+     * using it, the name on it should be theirs too.
+     *
+     * @return string The administrator's name, the support name, the site's
+     *                full name, or the host.
      */
-    public static function derived_name(): string {
+    public static function account_name(): string {
         global $CFG, $SITE;
+
+        $admin = self::current_admin();
+        if ($admin !== null) {
+            $name = fullname($admin);
+            if (trim($name) !== '') {
+                return $name;
+            }
+        }
 
         if (!empty($CFG->supportname)) {
             return $CFG->supportname;
@@ -198,7 +165,7 @@ class config {
             return format_string($SITE->fullname);
         }
 
-        return self::derived_website();
+        return self::website();
     }
 
     /**
@@ -249,6 +216,25 @@ class config {
     }
 
     /**
+     * Returns the body the provisioning call sends.
+     *
+     * Shared so that the browser diagnostic sends exactly what the server
+     * would, rather than an approximation of it.
+     *
+     * @return array
+     */
+    public static function provision_payload(): array {
+        return [
+            'name' => self::account_name(),
+            'email' => self::account_email(),
+            'company_name' => self::company_name(),
+            'website' => self::website(),
+            'plan_id' => self::PLAN_ID,
+            'country' => self::COUNTRY,
+        ];
+    }
+
+    /**
      * Returns the account the workspace is connected as.
      *
      * @return array Keys "name", "email" and "domain".
@@ -259,52 +245,5 @@ class config {
             'email' => self::account_email(),
             'domain' => self::website(),
         ];
-    }
-
-    /**
-     * Returns what the site suggests, for the fields an administrator edits.
-     *
-     * Shown as the placeholder beside each field, so a correction can always be
-     * undone by clearing the field rather than having to remember what was
-     * there before.
-     *
-     * @return array Keys "name", "email" and "domain".
-     */
-    public static function account_defaults(): array {
-        return [
-            'name' => self::derived_name(),
-            'email' => self::derived_email(),
-            'domain' => self::derived_website(),
-        ];
-    }
-
-    /**
-     * Stores a corrected account, or clears a field back to the site's own value.
-     *
-     * An empty field is stored as empty, which means "use what the site says"
-     * rather than "no account" — so clearing the dialog restores the defaults.
-     *
-     * @param array $values Keys "name", "email" and "domain".
-     * @return array The account in force afterwards.
-     * @throws \moodle_exception When a supplied value cannot be used.
-     */
-    public static function save_account(array $values): array {
-        $name = trim((string) ($values['name'] ?? ''));
-        $email = strtolower(trim((string) ($values['email'] ?? '')));
-        $domain = self::normalise_domain((string) ($values['domain'] ?? ''));
-
-        if ($email !== '' && !validate_email($email)) {
-            throw new \moodle_exception('erroraccountemail', self::COMPONENT);
-        }
-
-        if ($domain !== '' && strpos($domain, '.') === false) {
-            throw new \moodle_exception('erroraccountdomain', self::COMPONENT);
-        }
-
-        set_config('accountname', $name, self::COMPONENT);
-        set_config('accountemail', $email, self::COMPONENT);
-        set_config('accountdomain', $domain, self::COMPONENT);
-
-        return self::account();
     }
 }

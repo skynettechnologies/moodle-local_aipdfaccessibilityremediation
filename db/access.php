@@ -17,7 +17,7 @@
 /**
  * Capabilities for the AI PDF Accessibility Remediation plugin.
  *
- * @package     local_aipdfaccessibilityremediation
+ * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
-    'local/aipdfaccessibilityremediation:manage' => [
+    'local/freeaipdfaccessibilityremediation:manage' => [
         'riskbitmask' => RISK_CONFIG,
         'captype' => 'write',
         'contextlevel' => CONTEXT_SYSTEM,

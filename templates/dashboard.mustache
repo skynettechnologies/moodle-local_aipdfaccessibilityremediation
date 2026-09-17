@@ -15,12 +15,12 @@
     along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 }}
 {{!
-    @template local_aipdfaccessibilityremediation/dashboard
+    @template local_freeaipdfaccessibilityremediation/dashboard
 
     AI PDF Accessibility Remediation workspace.
 
     The markup is a shell. Every label is written in by the
-    local_aipdfaccessibilityremediation/dashboard AMD module from the language
+    local_freeaipdfaccessibilityremediation/dashboard AMD module from the language
     strings handed to it by index.php, and every row comes from the remediation
     service, so the template takes no context.
 
@@ -28,7 +28,22 @@
     {
     }
 }}
-<div class="aipdf-app" id="aipdf-app">
+<div class="aipdf-app aipdf-booting" id="aipdf-app">
+
+    {{!
+        What the page shows until the module has run. The markup below is a
+        shell: its labels are written in from the language pack and its tables
+        are filled from the service, so until that has happened it reads as a
+        broken page rather than a loading one. The module drops the booting
+        class when it is done, and CSS takes this away again.
+
+        The wording is rendered here rather than written in by JavaScript,
+        because JavaScript is the thing being waited for.
+    }}
+    <p class="aipdf-boot" role="status">
+        <span class="aipdf-spinner"></span>
+        <span>{{#str}}loading, local_freeaipdfaccessibilityremediation{{/str}}</span>
+    </p>
 
     <div class="aipdf-tabs" role="tablist">
         <button type="button" class="aipdf-tab aipdf-tab-active" data-aipdf-tab="upload"
@@ -49,6 +64,21 @@
     <p class="aipdf-subtitle" id="aipdf-subtitle"></p>
 
     {{!
+        Shown when the site could not be registered. The service's own sentence
+        goes in it, and it stays until a sign in succeeds: a workspace that
+        cannot reach its account can do nothing at all, so that is worth a
+        standing notice rather than a message that fades.
+    }}
+    <div class="aipdf-notice aipdf-notice-error aipdf-connection-error" id="aipdf-connection-error" hidden>
+        <span class="aipdf-notice-icon" data-aipdf-icon="warning" data-aipdf-size="24"></span>
+        <span>
+            <h2 data-aipdf-label="connectionfailed"></h2>
+            <p data-aipdf-role="connection-detail"></p>
+            <p class="aipdf-muted" data-aipdf-label="connectionhelp"></p>
+        </span>
+    </div>
+
+    {{!
         Which account this workspace is connected as, and which plan it is on.
         Both are filled in by the module: the account from the site settings or
         whatever an administrator corrected them to, the plan from /auth/me.
@@ -60,11 +90,6 @@
                 <span aria-hidden="true"> &middot; </span>
                 <span data-aipdf-role="email"></span>
             </span>
-            <button type="button" class="aipdf-btn aipdf-btn-ghost aipdf-btn-sm"
-                data-aipdf-action="account-change">
-                <span data-aipdf-icon="pencil" data-aipdf-size="15"></span>
-                <span data-aipdf-label="accountchange"></span>
-            </button>
         </div>
 
         <div class="aipdf-plan-bar" id="aipdf-plan-bar" hidden>
@@ -319,96 +344,6 @@
                 <button type="button" class="aipdf-btn aipdf-btn-secondary" data-aipdf-action="cancel"
                     data-aipdf-label="cancel"></button>
             </div>
-        </div>
-    </div>
-
-    <div class="aipdf-overlay" id="aipdf-suggestions" hidden>
-        <div class="aipdf-dialog aipdf-dialog-wide" role="dialog" aria-modal="true"
-            aria-labelledby="aipdf-suggestions-title">
-            <div class="aipdf-dialog-head">
-                <span>
-                    <h2 id="aipdf-suggestions-title">
-                        <span data-aipdf-icon="sparkles" data-aipdf-size="18"></span>
-                        <span data-aipdf-label="aisuggestions"></span>
-                    </h2>
-                    <p class="aipdf-muted" data-aipdf-role="subtitle"></p>
-                </span>
-                <button type="button" class="aipdf-dialog-close" data-aipdf-action="close">
-                    <span data-aipdf-icon="x" data-aipdf-size="16"></span>
-                    <span class="aipdf-sr-only" data-aipdf-label="close"></span>
-                </button>
-            </div>
-            <div class="aipdf-dialog-body" data-aipdf-role="body"></div>
-        </div>
-    </div>
-
-    {{!
-        The account the workspace registers under. Opened from the account bar,
-        pre-filled from the site's own settings — nothing here has to be filled
-        in before the workspace can be used.
-    }}
-    <div class="aipdf-overlay" id="aipdf-account" hidden>
-        <div class="aipdf-dialog" role="dialog" aria-modal="true" aria-labelledby="aipdf-account-title">
-            <form id="aipdf-account-form" novalidate>
-                <div class="aipdf-dialog-head">
-                    <span>
-                        <h2 id="aipdf-account-title" data-aipdf-label="accounttitle"></h2>
-                        <p class="aipdf-muted" data-aipdf-label="accountintro"></p>
-                    </span>
-                    <button type="button" class="aipdf-dialog-close" data-aipdf-action="close">
-                        <span data-aipdf-icon="x" data-aipdf-size="16"></span>
-                        <span class="aipdf-sr-only" data-aipdf-label="close"></span>
-                    </button>
-                </div>
-
-                <div class="aipdf-dialog-body">
-                    <p class="aipdf-field">
-                        <label for="aipdf-account-name" data-aipdf-label="accountname"></label>
-                        <input type="text" id="aipdf-account-name" class="aipdf-input"
-                            autocomplete="organization" aria-describedby="aipdf-account-name-hint">
-                        <span class="aipdf-field-error" id="aipdf-account-name-error" hidden></span>
-                        <span class="aipdf-field-hint" id="aipdf-account-name-hint"
-                            data-aipdf-label="accountnamehint"></span>
-                    </p>
-
-                    <p class="aipdf-field">
-                        <label for="aipdf-account-email" data-aipdf-label="accountemail"></label>
-                        <input type="email" id="aipdf-account-email" class="aipdf-input"
-                            autocomplete="email" aria-describedby="aipdf-account-email-hint">
-                        <span class="aipdf-field-error" id="aipdf-account-email-error" hidden></span>
-                        <span class="aipdf-field-hint" id="aipdf-account-email-hint"
-                            data-aipdf-label="accountemailhint"></span>
-                    </p>
-
-                    <p class="aipdf-field">
-                        <label for="aipdf-account-domain" data-aipdf-label="accountdomain"></label>
-                        <input type="text" id="aipdf-account-domain" class="aipdf-input"
-                            autocomplete="url" aria-describedby="aipdf-account-domain-hint">
-                        <span class="aipdf-field-error" id="aipdf-account-domain-error" hidden></span>
-                        <span class="aipdf-field-hint" id="aipdf-account-domain-hint"
-                            data-aipdf-label="accountdomainhint"></span>
-                    </p>
-
-                    <div class="aipdf-notice aipdf-notice-error" data-aipdf-role="failure" hidden>
-                        <span class="aipdf-notice-icon" data-aipdf-icon="warning"
-                            data-aipdf-size="20"></span>
-                        <span>
-                            <strong data-aipdf-label="accountfailed"></strong>
-                            <p data-aipdf-role="failure-text"></p>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="aipdf-dialog-foot">
-                    <button type="button" class="aipdf-btn aipdf-btn-ghost"
-                        data-aipdf-action="account-cancel" data-aipdf-label="cancel"></button>
-                    <button type="submit" class="aipdf-btn aipdf-btn-primary"
-                        data-aipdf-action="account-save">
-                        <span data-aipdf-icon="sparkles" data-aipdf-size="17"></span>
-                        <span data-aipdf-role="account-save-label"></span>
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 
