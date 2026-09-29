@@ -5,6 +5,29 @@ All notable changes to this plugin are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-29
+
+### Changed
+
+- Renamed to SkynetA11y PDF Remediation. The name under which Moodle installs
+  the plugin is unchanged, so this is an upgrade rather than a new plugin.
+- The workspace keeps its own light palette whatever the browser or the theme
+  is set to, rather than repainting itself dark and leaving half its colours
+  behind.
+- The plan bar reads "N pages remaining" rather than counting remaining
+  against an allowance the service does not always agree with.
+- Every control answers to the pointer and to the keyboard. Hover on the
+  primary buttons lightens rather than darkens, which on a colour that dark
+  was all but invisible, and focus draws a visible outline.
+- The workspace shows a loading state until it has something to show, instead
+  of the empty shell the server sends.
+
+### Removed
+
+- The AI Suggestions dialog, and the account Change dialog. The account now
+  follows Moodle's own settings: the domain from the site, the name and
+  address from the administrator signed in.
+
 ## [1.0.0] - 2026-09-08
 
 ### Added

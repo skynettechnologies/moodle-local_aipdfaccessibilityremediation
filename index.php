@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * AI PDF Accessibility Remediation workspace.
+ * SkynetA11y PDF Remediation workspace.
  *
  * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>

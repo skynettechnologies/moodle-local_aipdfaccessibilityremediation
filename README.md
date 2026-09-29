@@ -1,16 +1,15 @@
-[AI PDF Accessibility Remediation](https://www.skynettechnologies.com/pdf-accessibility-remediation) is an AI-powered document accessibility plugin for Moodle that repairs the barriers which make PDFs unusable with assistive technology.
+[SkynetA11y PDF Remediation](https://www.skynettechnologies.com/pdf-accessibility-remediation) is an AI-powered document accessibility plugin for Moodle that repairs the barriers which make PDFs unusable with assistive technology.
 
-Course handouts, policies, forms and reports are where accessibility quietly fails: a site can pass every page-level audit and still publish hundreds of untagged documents that a screen reader cannot navigate at all. This plugin makes remediation part of publishing. Upload documents or crawl your site for them, let AI repair them, review every check that was applied, and download conformant files without leaving Moodle. Supports accessibility initiatives aligned with WCAG 2.0, 2.1, 2.2, PDF/UA, ADA, Section 508, AODA and EAA EN 301 549, where applicable.
+Course handouts, policies, forms and reports are where accessibility quietly fails: a site can pass every page-level audit and still publish hundreds of untagged documents that a screen reader cannot navigate at all. This plugin makes remediation part of publishing. Upload documents or crawl your site for them, let AI repair them, and download conformant files without leaving Moodle. Supports accessibility initiatives aligned with WCAG 2.0, 2.1, 2.2, PDF/UA, ADA, Section 508, AODA and EAA EN 301 549, where applicable.
 
 ### Features
 
 - Automated repair of tags, reading order, alternate text, headings, tables and metadata
-- Every accessibility check reported individually, with a plain-language explanation and a before/after example
 - Upload by drag and drop, or crawl your site for every linked PDF
 - Bulk remediation with live progress
 - Deep tag scan that verifies the remediated file against its tag tree, not just its declared metadata
 - Authenticated downloads: remediated files are never exposed on a public link
-- No configuration: the site registers itself on first use, and the name, address and domain it registers under can be corrected from the workspace
+- No configuration: the site registers itself on first use
 - The plan and the pages left on it shown beside the tabs, with an upgrade link
 - Every label passes through `get_string()`, so the interface is translatable
 
@@ -50,10 +49,10 @@ Course handouts, lecture notes, syllabi, assignment briefs, policies, forms, pro
 
 #### Option 2: Install manually
 
-1. Unzip the plugin and copy the `aipdfaccessibilityremediation` folder into the `local` directory of your Moodle root:
+1. Unzip the plugin and copy the `freeaipdfaccessibilityremediation` folder into the `local` directory of your Moodle root:
 
    ```
-   {moodleroot}/local/aipdfaccessibilityremediation
+   {moodleroot}/local/freeaipdfaccessibilityremediation
    ```
 
 2. Sign in as an administrator and go to **Site administration → Notifications** to complete the installation, or run:
@@ -64,21 +63,25 @@ Course handouts, lecture notes, syllabi, assignment briefs, policies, forms, pro
 
 Your site registers itself with the remediation service the first time the page is opened, so there is nothing to configure.
 
-To open the plugin, go to **Site administration → Plugins → Local plugins → AI PDF Accessibility Remediation**. From there you can upload documents, crawl your site for PDFs, run remediation, review the accessibility checks and download the repaired files.
+To open the plugin, go to **Site administration → Plugins → Local plugins → SkynetA11y PDF Remediation**. From there you can upload documents, crawl your site for PDFs, run remediation and download the repaired files.
 
 ### How It Works
 
 1. **Add your PDFs.** Upload files, or crawl your site for every PDF it links to.
 2. **Run AI remediation.** Select documents and process them in bulk; progress is reported live.
-3. **Review and download.** Inspect each accessibility check with its explanation and before/after example, then download the conformant file.
+3. **Download.** Collect the conformant file from the Remediated PDFs tab.
 
 ### How the Site Is Identified
 
-The plugin registers the site and opens a session in one call, made from the server so that no provisioning key is exposed to the browser. The call is idempotent, so repeat visits reuse the same account rather than creating duplicates.
+The workspace registers the site as the first thing it does, by calling `POST /api/billing/provision-account` from the page itself. The call is idempotent, so repeat visits reuse the same account rather than creating duplicates, and every request that follows carries the session token it returns.
 
-Three values identify the account, and all three are taken from the site: the domain from `$CFG->wwwroot`, the address from the site support contact (falling back to `noreply@<host>`), and the name from the site's full name. One Moodle site therefore keeps one document library, whichever administrator is signed in.
+**The provisioning key is delivered to the browser.** It has to be, for the page to make that call: anyone who can open the workspace can read it in the page source. The workspace is behind `local/freeaipdfaccessibilityremediation:manage`, so that is every administrator of this site — but treat the key as shared with them, and rotate it if the site's administrators change.
 
-Those are suggestions rather than facts. The service identifies an account by its email address, so a support address shared with another property would put both on the same account and the wrong domain would be offered for scanning. The account bar above the tabs names the domain and address in force, and its **Change** button opens all three for editing. A correction is stored with `set_config`, so it belongs to the site rather than to one administrator's browser, and clearing a field restores what the site itself reports.
+Corrections typed into the account dialog take a different route: they are stored by Moodle through the External Services API — `local_freeaipdfaccessibilityremediation_get_session`, called with `core/ajax` — because only the server can write to the database, and that call carries core's capability check, session key and parameter validation.
+
+Three values identify the account: the domain comes from `$CFG->wwwroot`, while the name and address come from the administrator who is signed in, falling back to the site support contact and then to `noreply@<host>` when nobody is.
+
+The service identifies an account by its email address **and allows one account per domain**, so on a site with several administrators the first to open the workspace claims the domain and the next is refused with *"this domain is already associated with a different account"*. The account bar above the tabs names the domain and address in force; both follow Moodle's own settings, so where either is wrong it is corrected there.
 
 ### CORS Policy Configuration
 
@@ -102,9 +105,9 @@ The plugin stores no personal data in Moodle. It declares, through the Privacy A
 
 ### Screenshots
 
-![AI_PDF_Accessibility_Remediation_Image_1](https://www.skynettechnologies.com/sites/default/files/AiPdfAccessibilityRemediation/AI_PDF_Accessibility_Remediation_Image_1.jpg)
-![AI_PDF_Accessibility_Remediation_Image_2](https://www.skynettechnologies.com/sites/default/files/AiPdfAccessibilityRemediation/AI_PDF_Accessibility_Remediation_Image_2.jpg)
-![AI_PDF_Accessibility_Remediation_Image_3](https://www.skynettechnologies.com/sites/default/files/AiPdfAccessibilityRemediation/AI_PDF_Accessibility_Remediation_Image_3.jpg)
+![SkynetA11y PDF Remediation, screen 1](https://www.skynettechnologies.com/sites/default/files/SkynetA11yPDFRemediation/SkynetA11y-PDF-Remediation-Feature1.jpg)
+![SkynetA11y PDF Remediation, screen 2](https://www.skynettechnologies.com/sites/default/files/SkynetA11yPDFRemediation/SkynetA11y-PDF-Remediation-Feature2.jpg)
+![SkynetA11y PDF Remediation, screen 3](https://www.skynettechnologies.com/sites/default/files/SkynetA11yPDFRemediation/SkynetA11y-PDF-Remediation-Feature3.jpg)
 
 ### Support Options
 
@@ -122,7 +125,7 @@ Partner with us as an agency to provide comprehensive MOODLE ADA, EAA, WCAG acce
 
 #### **[Accessibility Affiliate Partnership](https://www.skynettechnologies.com/affiliate-partner)**
 
-Join our affiliate program and earn commissions by promoting AI PDF Accessibility Remediation. Share our accessibility solution within your network and help organisations improve their document accessibility while generating additional revenue.
+Join our affiliate program and earn commissions by promoting SkynetA11y PDF Remediation. Share our accessibility solution within your network and help organisations improve their document accessibility while generating additional revenue.
 
 For more details, please visit our [Accessibility Partnership Opportunities Page](https://www.skynettechnologies.com/partner-program).
 

@@ -19,7 +19,7 @@ namespace local_freeaipdfaccessibilityremediation\privacy;
 use core_privacy\local\metadata\collection;
 
 /**
- * Privacy provider for the AI PDF Accessibility Remediation plugin.
+ * Privacy provider for the SkynetA11y PDF Remediation plugin.
  *
  * The plugin stores no personal data in Moodle. It does send the site contact
  * details to the remediation service when the site is registered, and the

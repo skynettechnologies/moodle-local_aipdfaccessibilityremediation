@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Administration pages for the AI PDF Accessibility Remediation plugin.
+ * Administration pages for the SkynetA11y PDF Remediation plugin.
  *
  * The plugin has no configurable settings. The service address is fixed and
  * the account is derived from the site itself, so an administrator is never

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Strings for the AI PDF Accessibility Remediation plugin.
+ * Strings for the SkynetA11y PDF Remediation plugin.
  *
  * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>
@@ -61,7 +61,7 @@ $string['filename'] = 'File name';
 $string['filenamesource'] = 'File name / source';
 $string['filetoolarge'] = 'File is too large. Up to 50 MB is allowed.';
 $string['findpdfs'] = 'Find PDFs on {$a}';
-$string['freeaipdfaccessibilityremediation:manage'] = 'Manage AI PDF accessibility remediation';
+$string['freeaipdfaccessibilityremediation:manage'] = 'Manage SkynetA11y PDF Remediation';
 $string['gotopage'] = 'Go to page {$a}';
 $string['inprogress'] = 'AI remediation in progress...';
 $string['itemsperpage'] = 'Items per page';
@@ -77,8 +77,8 @@ $string['pages'] = 'Pages';
 $string['pagesleft'] = '{$a} pages remaining';
 $string['pdfformatonly'] = 'PDF format only';
 $string['pdfonly'] = 'PDF format only - please choose a .pdf file.';
-$string['pluginname'] = 'AI PDF Accessibility Remediation';
-$string['privacy:metadata:freeaipdfaccessibilityremediation'] = 'Documents and site contact details are sent to the AI PDF Accessibility Remediation service so that they can be checked and repaired.';
+$string['pluginname'] = 'SkynetA11y PDF Remediation';
+$string['privacy:metadata:freeaipdfaccessibilityremediation'] = 'Documents and site contact details are sent to the SkynetA11y PDF Remediation service so that they can be checked and repaired.';
 $string['privacy:metadata:freeaipdfaccessibilityremediation:company_name'] = 'The full name of the site, recorded on the remediation account.';
 $string['privacy:metadata:freeaipdfaccessibilityremediation:documents'] = 'The PDF documents an administrator uploads or selects for remediation.';
 $string['privacy:metadata:freeaipdfaccessibilityremediation:email'] = 'The site support email address, used to identify the remediation account.';

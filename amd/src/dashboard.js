@@ -17,7 +17,7 @@ import Log from 'core/log';
 import Templates from 'core/templates';
 
 /**
- * AI PDF Accessibility Remediation workspace.
+ * SkynetA11y PDF Remediation workspace.
  *
  * Drives the whole page: the three tabs, the document tables, the upload and
  * crawl actions, the remediation run and its progress, and the dialogs. Every

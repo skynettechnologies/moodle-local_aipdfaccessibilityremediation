@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Capabilities for the AI PDF Accessibility Remediation plugin.
+ * Capabilities for the SkynetA11y PDF Remediation plugin.
  *
  * @package     local_freeaipdfaccessibilityremediation
  * @copyright   2026 Skynet Technologies USA LLC <hello@skynettechnologies.com>

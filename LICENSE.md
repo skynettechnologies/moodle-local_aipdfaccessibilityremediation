@@ -1,6 +1,6 @@
 # Licence
 
-AI PDF Accessibility Remediation for Moodle
+SkynetA11y PDF Remediation for Moodle
 Copyright (C) 2026 Skynet Technologies USA LLC
 
 This program is free software: you can redistribute it and/or modify
